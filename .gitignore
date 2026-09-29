@@ -1,2 +1,5 @@
 # Личные настройки Obsidian
 Docs/Tasks/.obsidian/
+
+# Клоны проектов для набора проверок (Bench): не коммитим, URL и коммит — в Bench/README.md и эталонах
+Bench/projects/
