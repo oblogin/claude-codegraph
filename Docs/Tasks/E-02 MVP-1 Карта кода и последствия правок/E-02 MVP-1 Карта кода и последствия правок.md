@@ -1,7 +1,7 @@
 ---
 id: E-02
 type: epic
-status: draft
+status: ready
 priority: must
 created: 2026-09-29
 ---
