@@ -1,0 +1,93 @@
+schema: 1
+id: nano-01-session-push-callers
+project: nano
+commit: dbf22c701d271c5dcdb647df375320a9986b83d5
+languages: [go]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает (*session.Session).Push, включая примеры и тесты? У agent, acceptor и mock.NetworkEntity есть
+  свои методы Push — они не нужны.
+target:
+  file: session/session.go
+  symbol: session.(*Session).Push
+  line: 91
+direction: incoming
+match: line
+edges:
+  - rel: call
+    expect: must
+    from: {file: cluster/node.go, line: 376, symbol: cluster.(*Node).HandlePush}
+    confidence: high
+    how: "s := n.findSession(req.SessionId) → *session.Session; s.Push(req.Route, req.Data). gRPC-обработчик пуша с удалённого узла кластера."
+  - rel: call
+    expect: must
+    from: {file: group.go, line: 124, symbol: nano.(*Group).Multicast}
+    confidence: high
+    how: "for _, s := range c.sessions (map[int64]*session.Session) { s.Push(route, data) }."
+  - rel: call
+    expect: must
+    from: {file: group.go, line: 151, symbol: nano.(*Group).Broadcast}
+    confidence: high
+    how: "То же в Broadcast."
+  - rel: call
+    expect: must
+    from: {file: examples/cluster/master/topic_service.go, line: 49, symbol: master.(*TopicService).NewUser}
+    confidence: high
+    how: "s *session.Session — параметр обработчика; s.Push(\"onMembers\", …)."
+  - rel: call
+    expect: must
+    from: {file: examples/cluster/master/topic_service.go, line: 83, symbol: master.(*TopicService).Stats}
+    confidence: high
+    how: "s.Push(\"onBalance\", …)."
+  - rel: call
+    expect: must
+    from: {file: examples/demo/chat/main.go, line: 119, symbol: main.(*RoomManager).Join}
+    confidence: high
+    how: "s.Push(\"onMembers\", …)."
+  - rel: test
+    expect: must
+    from: {file: benchmark/io/io_test.go, line: 53, symbol: io.(*TestHandler).Ping}
+    confidence: high
+    how: "Обработчик в бенчмарк-тесте: s.Push(\"pong\", …)."
+  - rel: test
+    expect: must
+    from: {file: cluster/node_test.go, line: 27, symbol: cluster_test.(*MasterComponent).Test}
+    confidence: high
+    how: "Параметр назван session (затеняет имя пакета): session.Push(\"test\", …) — вызов метода, а не функции пакета session."
+  - rel: test
+    expect: must
+    from: {file: cluster/node_test.go, line: 31, symbol: cluster_test.(*GateComponent).Test}
+    confidence: high
+    how: "session.Push(...) на параметре session *session.Session."
+  - rel: test
+    expect: must
+    from: {file: cluster/node_test.go, line: 39, symbol: cluster_test.(*GameComponent).Test}
+    confidence: high
+    how: "session.Push(...) на параметре session *session.Session."
+  # --- ловушки ---
+  - rel: call_interface
+    expect: must_not
+    from: {file: session/session.go, line: 92, symbol: session.(*Session).Push}
+    confidence: high
+    how: "s.entity.Push(route, v) — вызов NetworkEntity.Push (интерфейс) ИЗ target, а не вызов target."
+  - rel: test
+    expect: must_not
+    from: {file: mock/network_entity_test.go, line: 51, symbol: mock_test.(*networkEntitySuite).TestNetworkEntity}
+    confidence: high
+    how: "entity.Push(\"t.tt\", \"test\") — entity := mock.NewNetworkEntity(), это (*mock.NetworkEntity).Push."
+  - rel: call
+    expect: must_not
+    from: {file: cluster/agent.go, line: 214}
+    confidence: high
+    how: "scheduler.PushTask(...) — совпадение по подстроке «Push(». То же handler.go:506, node.go:407."
+  - rel: call
+    expect: must_not
+    from: {file: examples/demo/chat/main.go, line: 147, symbol: main.main}
+    confidence: high
+    how: "pip.Outbound().PushBack(stats.outbound) — метод pipeline.Channel.PushBack."
+notes: >
+  Проверяет разрешение метода по типу получателя в Go: четыре типа с методом Push (Session, agent, acceptor,
+  mock.NetworkEntity) и две функции с префиксом Push. Особый случай — параметр с именем session, совпадающим с
+  именем пакета (node_test.go). Транзитивно Session.Push вызывается через Group.Broadcast/Multicast из примеров
+  (см. nano-06) — в этот эталон не включено.

@@ -1,0 +1,68 @@
+schema: 1
+id: ggez-04-has-graphicscontext-impls
+project: ggez
+commit: 9c865474504084b60204874bc028ba91c5f013b9
+languages: [rust]
+kind: implementations
+trap: true
+question: >
+  Какие типы реализуют Has<GraphicsContext>, т. е. что можно передать в функции с параметром
+  gfx: &impl Has<GraphicsContext> (Canvas::from_frame, Image::new, Drawable::dimensions и др.)?
+target:
+  file: src/context.rs
+  symbol: "Has<GraphicsContext>"
+  line: 125
+direction: incoming
+match: line
+edges:
+  - rel: implement
+    expect: must
+    from: {file: src/context.rs, line: 144, symbol: "impl Has<GraphicsContext> for Context"}
+    confidence: high
+    how: "fn retrieve(&self) -> &GraphicsContext { &self.gfx }."
+  - rel: implement
+    expect: must
+    from: {file: src/context.rs, line: 130, symbol: "impl<T> Has<T> for T"}
+    confidence: high
+    how: "Обобщённая (blanket) реализация: при T = GraphicsContext сам GraphicsContext реализует Has<GraphicsContext>, поэтому можно передавать &ctx.gfx. Явного упоминания GraphicsContext в строке нет."
+  - rel: implement
+    expect: must
+    from: {file: examples/custom_context.rs, line: 33, symbol: "impl Has<GraphicsContext> for MyContext"}
+    confidence: high
+    how: "Пример собственного контекста игры."
+  # --- ловушки: тот же трейт с другим параметром и соседний трейт HasMut ---
+  - rel: implement
+    expect: must_not
+    from: {file: src/context.rs, line: 137, symbol: "impl Has<Filesystem> for Context"}
+    confidence: high
+    how: "Has<Filesystem> — другой параметр типа."
+  - rel: implement
+    expect: must_not
+    from: {file: src/context.rs, line: 152, symbol: "impl Has<audio::AudioContext> for Context"}
+    confidence: high
+    how: "Has<AudioContext> (под #[cfg(feature = \"audio\")])."
+  - rel: implement
+    expect: must_not
+    from: {file: src/context.rs, line: 182, symbol: "impl HasMut<GraphicsContext> for Context"}
+    confidence: high
+    how: "HasMut<GraphicsContext> — другой трейт (HasMut, стр. 163), хотя параметр тот же."
+  - rel: implement
+    expect: must_not
+    from: {file: examples/custom_context.rs, line: 26, symbol: "impl Has<Filesystem> for MyContext"}
+    confidence: high
+    how: "Другой параметр типа."
+  - rel: implement
+    expect: must_not
+    from: {file: examples/custom_context.rs, line: 47, symbol: "impl HasMut<GraphicsContext> for MyContext"}
+    confidence: high
+    how: "Другой трейт."
+  - rel: implement
+    expect: must_not
+    from: {file: src/context.rs, line: 168, symbol: "impl<T> HasMut<T> for T"}
+    confidence: high
+    how: "Blanket-реализация другого трейта HasMut."
+notes: >
+  Проверяет дженерики трейтов: Has<T> — один трейт с разными параметрами, реализации которого нужно различать
+  по аргументу типа. Blanket-реализация impl<T> Has<T> for T — неочевидный must: grep по «Has<GraphicsContext>»
+  её не найдёт, а tree-sitter без подстановки типов не свяжет. Обратная сторона (где требуется Has<GraphicsContext>) —
+  десятки функций в graphics/*, в эталон не включена.

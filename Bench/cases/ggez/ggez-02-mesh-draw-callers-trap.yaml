@@ -1,0 +1,64 @@
+schema: 1
+id: ggez-02-mesh-draw-callers-trap
+project: ggez
+commit: 9c865474504084b60204874bc028ba91c5f013b9
+languages: [rust]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает <Mesh as Drawable>::draw? Методов draw в проекте много (EventHandler::draw, Canvas::draw,
+  Canvas3d::draw, Drawable3d::draw, методы примеров, wgpu RenderPass::draw) — нужен только этот.
+target:
+  file: src/graphics/mesh.rs
+  symbol: "<Mesh as Drawable>::draw"
+  line: 246
+direction: incoming
+match: line
+edges:
+  - rel: call_interface
+    expect: must
+    from: {file: src/graphics/canvas.rs, line: 384, symbol: Canvas::draw}
+    confidence: high
+    how: "pub fn draw(&mut self, drawable: &impl Drawable, …) { drawable.draw(self, param) } — дженерик по Drawable; при canvas.draw(&mesh, …) мономорфизируется в вызов Mesh::draw. Основной путь."
+  - rel: call
+    expect: must
+    from: {file: src/graphics/mesh.rs, line: 278, symbol: "<Quad as Drawable>::draw"}
+    confidence: high
+    how: "canvas.default_resources().mesh.clone().draw(canvas, param) — DefaultResources.mesh: Mesh (canvas.rs:583), прямой вызов конкретного Mesh::draw."
+  - rel: call_interface
+    expect: must
+    from: {file: src/graphics/mod.rs, line: 105, symbol: graphics::draw}
+    confidence: high
+    how: "Устаревшая функция #[deprecated] pub fn draw(canvas, drawable: &impl Drawable, param) { drawable.draw(canvas, param) }."
+  # --- ловушки ---
+  - rel: call_interface
+    expect: must_not
+    from: {file: src/graphics/canvas3d.rs, line: 351, symbol: Canvas3d::draw}
+    confidence: high
+    how: "drawable.draw(self, param) с drawable: &impl Drawable3d — другой трейт; Mesh не реализует Drawable3d (есть Mesh3d)."
+  - rel: call
+    expect: must_not
+    from: {file: src/graphics/mod.rs, line: 178, symbol: graphics::draw_queued_text}
+    confidence: high
+    how: "queued_text.0.draw(canvas, …) — элементы canvas.queued_texts: Vec<(Text, Point2, Option<Color>)> (canvas.rs:40), это <Text as Drawable>::draw."
+  - rel: call_interface
+    expect: must_not
+    from: {file: src/event.rs, line: 643, symbol: "<GgezApplicationHandler<S, C, E> as ApplicationHandler>::about_to_wait"}
+    confidence: high
+    how: "self.state.draw(&mut self.ctx) — EventHandler::draw игры."
+  - rel: call
+    expect: must_not
+    from: {file: examples/04_snake.rs, line: 426}
+    confidence: high
+    how: "self.snake.draw(&mut canvas) — собственный метод Snake::draw (стр. 322); то же self.food.draw (стр. 427, Food::draw стр. 191)."
+  - rel: call
+    expect: must_not
+    from: {file: src/graphics/context.rs, line: 711, symbol: GraphicsContext::end_frame}
+    confidence: high
+    how: "present_pass.draw(0..3, 0..1) — wgpu::RenderPass::draw. То же gpu/text.rs:159 (pass.draw)."
+notes: >
+  Трейт-метод, реализованный пятью типами (Image, InstanceArray, Mesh, Quad, Text), плюс одноимённые draw у
+  трейтов EventHandler/Drawable3d и у wgpu. Прямой конкретный вызов Mesh::draw один (из Quad::draw), остальные
+  два — дженерики &impl Drawable, которые достигают Mesh::draw только при мономорфизации: мы засчитываем их как
+  must (именно так вызывается Mesh::draw). Вызовы canvas.draw(&mesh, …) в примерах — транзитивные (через
+  Canvas::draw) и в эталон не выписаны: при ответе инструмента считаются «лишними» и разбираются вручную.

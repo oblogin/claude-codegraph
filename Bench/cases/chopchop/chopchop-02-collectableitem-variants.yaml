@@ -1,0 +1,148 @@
+schema: 1
+id: chopchop-02-collectableitem-variants
+project: chopchop
+commit: 608eac98df29cd97821a6115cd52dfb9027345b1
+languages: [csharp, unity-yaml]
+kind: unity_placement
+trap: false
+question: >
+  В каких префабах и сценах есть компонент CollectableItem (подбираемый предмет),
+  включая варианты префабов и вложенные экземпляры?
+target:
+  file: UOP1_Project/Assets/Scripts/Inventory/CollectableItem.cs
+  symbol: CollectableItem
+  line: 4
+direction: incoming
+match: file
+scope: [UOP1_Project/Assets/]
+edges:
+  - rel: script_on_object
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Droppable/Collectable_Item.prefab, line: 45, fileID: "2126586097156616356", object: Collectable_Item}
+    confidence: high
+    how: "m_Script guid 49f5b1dd… = CollectableItem.cs.meta. Базовый префаб для всех Collectable_*."
+  - rel: script_on_object
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Food/Ginger.prefab, line: 12, fileID: "-3501067947960678342"}
+    confidence: high
+    how: "Прямой m_Script. Префаб нигде не используется (guid 7923778c… не встречается в других ассетах), но компонент на нём висит."
+  - rel: script_on_object
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Food/Lobster.prefab, line: 12, fileID: "-3690835701502848158"}
+    confidence: high
+    how: "Прямой m_Script. Префаб нигде не используется."
+  - rel: script_via_prefab
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Droppable/Collectable_Ginger.prefab, line: 146}
+    via: [UOP1_Project/Assets/Prefabs/Droppable/Collectable_Item.prefab]
+    confidence: high
+    how: "Вариант: корневой PrefabInstance с m_TransformParent {fileID: 0}, m_SourcePrefab = Collectable_Item.prefab (guid 0f60adbc…), m_RemovedComponents пуст. GUID скрипта в файле нет."
+  - rel: script_via_prefab
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Droppable/Collectable_GoldenEgg.prefab, line: 77}
+    via: [UOP1_Project/Assets/Prefabs/Droppable/Collectable_Item.prefab]
+    confidence: high
+    how: "Вариант: корневой PrefabInstance с m_TransformParent {fileID: 0}, m_SourcePrefab = Collectable_Item.prefab (guid 0f60adbc…), m_RemovedComponents пуст. GUID скрипта в файле нет."
+  - rel: script_via_prefab
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Droppable/Collectable_Lemon.prefab, line: 77}
+    via: [UOP1_Project/Assets/Prefabs/Droppable/Collectable_Item.prefab]
+    confidence: high
+    how: "Вариант: корневой PrefabInstance с m_TransformParent {fileID: 0}, m_SourcePrefab = Collectable_Item.prefab (guid 0f60adbc…), m_RemovedComponents пуст. GUID скрипта в файле нет."
+  - rel: script_via_prefab
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Droppable/Collectable_Lobster.prefab, line: 77}
+    via: [UOP1_Project/Assets/Prefabs/Droppable/Collectable_Item.prefab]
+    confidence: high
+    how: "Вариант: корневой PrefabInstance с m_TransformParent {fileID: 0}, m_SourcePrefab = Collectable_Item.prefab (guid 0f60adbc…), m_RemovedComponents пуст. GUID скрипта в файле нет."
+  - rel: script_via_prefab
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Droppable/Collectable_Onion.prefab, line: 161}
+    via: [UOP1_Project/Assets/Prefabs/Droppable/Collectable_Item.prefab]
+    confidence: high
+    how: "Вариант: корневой PrefabInstance с m_TransformParent {fileID: 0}, m_SourcePrefab = Collectable_Item.prefab (guid 0f60adbc…), m_RemovedComponents пуст. GUID скрипта в файле нет."
+  - rel: script_via_prefab
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Droppable/Collectable_RockCritterEgg.prefab, line: 77}
+    via: [UOP1_Project/Assets/Prefabs/Droppable/Collectable_Item.prefab]
+    confidence: high
+    how: "Вариант: корневой PrefabInstance с m_TransformParent {fileID: 0}, m_SourcePrefab = Collectable_Item.prefab (guid 0f60adbc…), m_RemovedComponents пуст. GUID скрипта в файле нет."
+  - rel: script_via_prefab
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Droppable/Collectable_Seed.prefab, line: 166}
+    via: [UOP1_Project/Assets/Prefabs/Droppable/Collectable_Item.prefab]
+    confidence: high
+    how: "Вариант: корневой PrefabInstance с m_TransformParent {fileID: 0}, m_SourcePrefab = Collectable_Item.prefab (guid 0f60adbc…), m_RemovedComponents пуст. GUID скрипта в файле нет."
+  - rel: script_via_prefab
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Droppable/Collectable_SlimeCritterEgg.prefab, line: 161}
+    via: [UOP1_Project/Assets/Prefabs/Droppable/Collectable_Item.prefab]
+    confidence: high
+    how: "Вариант: корневой PrefabInstance с m_TransformParent {fileID: 0}, m_SourcePrefab = Collectable_Item.prefab (guid 0f60adbc…), m_RemovedComponents пуст. GUID скрипта в файле нет."
+  - rel: script_via_prefab
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Droppable/Collectable_SpecialSpoon.prefab, line: 146}
+    via: [UOP1_Project/Assets/Prefabs/Droppable/Collectable_Item.prefab]
+    confidence: high
+    how: "Вариант: корневой PrefabInstance с m_TransformParent {fileID: 0}, m_SourcePrefab = Collectable_Item.prefab (guid 0f60adbc…), m_RemovedComponents пуст. GUID скрипта в файле нет."
+  - rel: script_via_prefab
+    expect: must
+    from: {file: UOP1_Project/Assets/Scenes/Examples/InventoryScene.unity, line: 838}
+    via: [UOP1_Project/Assets/Prefabs/Droppable/Collectable_Item.prefab]
+    confidence: high
+    how: "PrefabInstance с m_SourcePrefab = Collectable_Item.prefab, m_RemovedComponents: []."
+  # --- ассеты, которые ссылаются на префабы, но компонент в них не «висит» ---
+  - rel: asset_ref
+    expect: may
+    from: {file: UOP1_Project/Assets/ScriptableObjects/Inventory/Items/TestItems/Ginger.asset}
+    confidence: high
+    how: "ItemSO ссылается по guid на Collectable_Ginger.prefab (префаб предмета для выпадения). Это ссылка, не размещение компонента."
+  - rel: asset_ref
+    expect: may
+    from: {file: UOP1_Project/Assets/ScriptableObjects/Inventory/Items/TestItems/Lemon.asset}
+    confidence: high
+    how: "ItemSO ссылается по guid на Collectable_Lemon.prefab (префаб предмета для выпадения). Это ссылка, не размещение компонента."
+  - rel: asset_ref
+    expect: may
+    from: {file: UOP1_Project/Assets/ScriptableObjects/Inventory/Items/TestItems/Lobster.asset}
+    confidence: high
+    how: "ItemSO ссылается по guid на Collectable_Lobster.prefab (префаб предмета для выпадения). Это ссылка, не размещение компонента."
+  - rel: asset_ref
+    expect: may
+    from: {file: UOP1_Project/Assets/ScriptableObjects/Inventory/Items/TestItems/SlimeCritterEgg.asset}
+    confidence: high
+    how: "ItemSO ссылается по guid на Collectable_SlimeCritterEgg.prefab (префаб предмета для выпадения). Это ссылка, не размещение компонента."
+  - rel: asset_ref
+    expect: may
+    from: {file: UOP1_Project/Assets/ScriptableObjects/Inventory/Items/TestItems/Lemonade.asset}
+    confidence: high
+    how: "ItemSO ссылается по guid на Collectable_Item.prefab (префаб предмета для выпадения). Это ссылка, не размещение компонента."
+  - rel: asset_ref
+    expect: may
+    from: {file: UOP1_Project/Assets/ScriptableObjects/Inventory/Items/QuestItems/GoldenEgg.asset}
+    confidence: high
+    how: "ItemSO ссылается по guid на Collectable_GoldenEgg.prefab (префаб предмета для выпадения). Это ссылка, не размещение компонента."
+  - rel: asset_ref
+    expect: may
+    from: {file: UOP1_Project/Assets/ScriptableObjects/Inventory/Items/QuestItems/Onion.asset}
+    confidence: high
+    how: "ItemSO ссылается по guid на Collectable_Onion.prefab (префаб предмета для выпадения). Это ссылка, не размещение компонента."
+  - rel: asset_ref
+    expect: may
+    from: {file: UOP1_Project/Assets/ScriptableObjects/Inventory/Items/QuestItems/RockCritterEgg.asset}
+    confidence: high
+    how: "ItemSO ссылается по guid на Collectable_RockCritterEgg.prefab (префаб предмета для выпадения). Это ссылка, не размещение компонента."
+  - rel: asset_ref
+    expect: may
+    from: {file: UOP1_Project/Assets/ScriptableObjects/Inventory/Items/QuestItems/Seed.asset}
+    confidence: high
+    how: "ItemSO ссылается по guid на Collectable_Seed.prefab (префаб предмета для выпадения). Это ссылка, не размещение компонента."
+  - rel: asset_ref
+    expect: may
+    from: {file: UOP1_Project/Assets/ScriptableObjects/Inventory/Items/QuestItems/SpecialSpoon.asset}
+    confidence: high
+    how: "ItemSO ссылается по guid на Collectable_SpecialSpoon.prefab (префаб предмета для выпадения). Это ссылка, не размещение компонента."
+notes: >
+  Проверяет варианты префабов: 10 из 13 файлов с компонентом не содержат GUID скрипта (9 вариантов и сцена),
+  grep по guid их пропустит. Варианты в сцены не вставлены (появляются в рантайме при выпадении предметов,
+  через ItemSO). Ссылки из ItemSO (*.asset) помечены may: это «ассет знает префаб», а не «компонент на объекте».

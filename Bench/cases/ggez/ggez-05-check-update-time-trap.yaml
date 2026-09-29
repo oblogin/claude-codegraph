@@ -1,0 +1,67 @@
+schema: 1
+id: ggez-05-check-update-time-trap
+project: ggez
+commit: 9c865474504084b60204874bc028ba91c5f013b9
+languages: [rust]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает метод TimeContext::check_update_time (ограничение частоты обновления логики)?
+  Есть устаревшая свободная функция timer::check_update_time с тем же именем.
+target:
+  file: src/timer.rs
+  symbol: TimeContext::check_update_time
+  line: 171
+direction: incoming
+match: line
+edges:
+  - rel: call
+    expect: must
+    from: {file: examples/03_drawing.rs, line: 122, symbol: "<MainState as EventHandler>::update"}
+    confidence: high
+    how: "while ctx.time.check_update_time(DESIRED_FPS) — ctx: &mut Context, поле time: TimeContext."
+  - rel: call
+    expect: must
+    from: {file: examples/04_snake.rs, line: 390, symbol: "<GameState as EventHandler>::update"}
+    confidence: high
+    how: "while ctx.time.check_update_time(DESIRED_FPS) — ctx: &mut Context, поле time: TimeContext."
+  - rel: call
+    expect: must
+    from: {file: examples/05_astroblasto.rs, line: 448, symbol: "<MainState as EventHandler>::update"}
+    confidence: high
+    how: "while ctx.time.check_update_time(DESIRED_FPS) — ctx: &mut Context, поле time: TimeContext."
+  - rel: call
+    expect: must
+    from: {file: examples/graphics_settings.rs, line: 61, symbol: "<MainState as EventHandler>::update"}
+    confidence: high
+    how: "while ctx.time.check_update_time(DESIRED_FPS) — ctx: &mut Context, поле time: TimeContext."
+  - rel: call
+    expect: must
+    from: {file: examples/imageview.rs, line: 70, symbol: "<MainState as EventHandler>::update"}
+    confidence: high
+    how: "while ctx.time.check_update_time(DESIRED_FPS) — ctx: &mut Context, поле time: TimeContext."
+  - rel: call
+    expect: must
+    from: {file: examples/logging.rs, line: 85, symbol: "<App as EventHandler>::update"}
+    confidence: high
+    how: "while ctx.time.check_update_time(DESIRED_FPS) — ctx: &mut Context, поле time: TimeContext."
+  - rel: call
+    expect: must
+    from: {file: examples/text.rs, line: 135, symbol: "<App as EventHandler>::update"}
+    confidence: high
+    how: "while ctx.time.check_update_time(DESIRED_FPS) — ctx: &mut Context, поле time: TimeContext."
+  # --- ловушки ---
+  - rel: reference
+    expect: must_not
+    from: {file: src/timer.rs, line: 279, symbol: timer::check_update_time}
+    confidence: high
+    how: "#[deprecated] pub fn check_update_time(ctx: &mut Context, target_fps) — отдельная свободная функция с тем же именем; метод НЕ вызывает (дублирует логику через ctx.time). Сама нигде не вызывается."
+  - rel: reference
+    expect: must_not
+    from: {file: src/timer.rs, line: 182}
+    confidence: high
+    how: "Док-комментарий со ссылкой [`check_update_time()`](fn.check_update_time.html) — не вызов. То же стр. 185, 200, 292, 295."
+notes: >
+  Ловушка «метод и свободная функция с одним именем в одном модуле». Все 7 вызовов метода — в примерах внутри
+  EventHandler::update (библиотека сама метод не вызывает). Устаревшая функция timer::check_update_time
+  не вызывается нигде и метод не вызывает: связь «функция → метод» была бы ложной.

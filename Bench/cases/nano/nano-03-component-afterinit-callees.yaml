@@ -1,0 +1,47 @@
+schema: 1
+id: nano-03-component-afterinit-callees
+project: nano
+commit: dbf22c701d271c5dcdb647df375320a9986b83d5
+languages: [go]
+kind: callees
+trap: true
+question: >
+  Какие реальные методы AfterInit может вызвать cluster.(*Node).Startup в строке c.Comp.AfterInit()
+  (вызов через интерфейс component.Component)? Какие AfterInit в проекте не вызываются никогда?
+target:
+  file: cluster/node.go
+  symbol: cluster.(*Node).Startup
+  line: 105
+direction: outgoing
+match: line
+edges:
+  - rel: call_interface
+    expect: must
+    to: {file: examples/demo/chat/main.go, line: 89, symbol: main.(*RoomManager).AfterInit}
+    confidence: high
+    how: "RoomManager регистрируется в components.Register(NewRoomManager(), …) (main.go:138) и передаётся в nano.WithComponents; Startup обходит все зарегистрированные компоненты."
+  - rel: call_interface
+    expect: must
+    to: {file: benchmark/io/io_test.go, line: 33, symbol: io.(*TestHandler).AfterInit}
+    confidence: high
+    how: "components.Register(NewTestHandler()) (io_test.go:58)."
+  - rel: call_interface
+    expect: must
+    to: {file: component/base.go, line: 30, symbol: component.(*Base).AfterInit}
+    confidence: high
+    how: "Пустая реализация, продвигаемая встраиванием component.Base во все остальные зарегистрированные компоненты без своего AfterInit: tadpole Manager/World, cluster-примеры RoomService/BindService/TopicService, customerroute, компоненты node_test.go."
+  - rel: call_interface
+    expect: must_not
+    to: {file: examples/demo/chat/main.go, line: 70, symbol: main.(*stats).AfterInit}
+    confidence: high
+    how: "Тип stats встраивает component.Base и формально реализует Component, но нигде не регистрируется: в main используются только его методы stats.outbound/stats.inbound как функции конвейера (main.go:147–148). Этот AfterInit (с таймером статистики) не вызывается никогда — ошибка в примере."
+  - rel: call_interface
+    expect: must_not
+    to: {file: examples/demo/tadpole/logic/world.go, line: 28, symbol: logic.(*World).Init}
+    confidence: high
+    how: "Другой метод интерфейса: его вызывает соседняя строка c.Comp.Init() (node.go:102), а не AfterInit. World своего AfterInit не имеет — для него на стр. 105 вызывается Base.AfterInit."
+notes: >
+  Outgoing-запрос: «куда уходит вызов через интерфейс». Консервативный анализ (CHA — все типы, реализующие
+  Component) включит stats.AfterInit; анализ по фактическим преобразованиям в интерфейс (RTA/VTA) или по
+  регистрациям — нет. Эталон фиксирует фактическое поведение: stats не регистрируется. Ответ «Base.AfterInit»
+  засчитывается только если инструмент понимает продвижение методов через встраивание.

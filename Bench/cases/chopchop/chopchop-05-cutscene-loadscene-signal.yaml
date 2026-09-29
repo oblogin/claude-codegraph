@@ -1,0 +1,61 @@
+schema: 1
+id: chopchop-05-cutscene-loadscene-signal
+project: chopchop
+commit: 608eac98df29cd97821a6115cd52dfb9027345b1
+languages: [csharp, unity-yaml]
+kind: unity_event
+trap: true
+question: >
+  Кто вызывает CutsceneSceneLoader.LoadScene? Из кода вызовов нет — откуда он срабатывает?
+target:
+  file: UOP1_Project/Assets/Scripts/Cutscenes/CutsceneSceneLoader.cs
+  symbol: CutsceneSceneLoader.LoadScene
+  line: 11
+direction: incoming
+match: line
+scope: [UOP1_Project/Assets/]
+edges:
+  - rel: unity_event
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Cutscenes/BeachGameEndCutscene.prefab, line: 313, fileID: "2313194055260239634", object: "SignalReceiver катсцены"}
+    confidence: high
+    how: "Компонент SignalReceiver (Timeline, m_Script e52de21a…): m_Events.m_Signals[0] = сигнал-ассет 1550c0b2…, m_Events.m_Events[0].m_PersistentCalls → m_Target {fileID: 1513774127311603601} (стр. 323, m_Script af0ba6b3… = CutsceneSceneLoader.cs), m_MethodName: LoadScene. Вызывается, когда Timeline доходит до маркера сигнала."
+  - rel: unity_event
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Cutscenes/SweetDishCutscene.prefab, line: 1093, object: "SignalReceiver катсцены"}
+    confidence: high
+    how: "Такой же SignalReceiver (документ !u!114 &52669666117061954, стр. 1073): m_Target {fileID: 9199414420097767683} → m_Script af0ba6b3… = CutsceneSceneLoader.cs, m_MethodName: LoadScene."
+  # --- транзитивно: сцены, куда вставлены эти катсцены ---
+  - rel: unity_event
+    expect: may
+    from: {file: UOP1_Project/Assets/Scenes/Locations/Beach_Night.unity, line: 19514}
+    via: [UOP1_Project/Assets/Prefabs/Cutscenes/BeachGameEndCutscene.prefab]
+    confidence: high
+    how: "PrefabInstance BeachGameEndCutscene; вызов настроен в префабе."
+  - rel: unity_event
+    expect: may
+    from: {file: UOP1_Project/Assets/Scenes/Locations/Town_Upper.unity, line: 9592}
+    via: [UOP1_Project/Assets/Prefabs/Cutscenes/SweetDishCutscene.prefab]
+    confidence: high
+    how: "PrefabInstance SweetDishCutscene."
+  # --- ловушки: всё, что grep находит по «LoadScene» ---
+  - rel: call
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scenes/Whiteboxing/Community/GeneralMapMediumMultipleScenes/Scripts/SceneLoadScript.cs, line: 23}
+    confidence: high
+    how: "SceneManager.LoadScene — метод Unity, другой класс."
+  - rel: call
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/SceneManagement/SceneLoader.cs, line: 145, symbol: SceneLoader.UnloadPreviousScene}
+    confidence: high
+    how: "AssetReference.UnLoadScene (Addressables) — совпадение по подстроке."
+  - rel: call
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/SceneManagement/SceneLoader.cs, line: 171, symbol: SceneLoader.LoadNewScene}
+    confidence: high
+    how: "LoadSceneAsync — совпадение по подстроке; то же SceneLoader.cs:67, 93 и InitializationLoader.cs:23."
+notes: >
+  Метод без вызовов в C#, вызывается только из UnityEvent внутри Timeline SignalReceiver (поле m_Events.m_Events,
+  а не привычное m_OnClick). Индексатор, который ищет только m_OnClick/m_PersistentCalls кнопок по известным путям,
+  его не увидит; нужен разбор любых m_PersistentCalls. Правильная цель определяется через m_Target → m_Script.
+  Сам сигнал запускает Timeline-ассет (.playable) катсцены — эта цепочка (playable → signal → receiver) в эталон не включена.

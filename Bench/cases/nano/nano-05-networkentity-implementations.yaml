@@ -1,0 +1,64 @@
+schema: 1
+id: nano-05-networkentity-implementations
+project: nano
+commit: dbf22c701d271c5dcdb647df375320a9986b83d5
+languages: [go]
+kind: implementations
+trap: true
+question: >
+  Какие типы реализуют интерфейс session.NetworkEntity (в Go — неявно, по набору методов) и где они
+  подставляются вместо интерфейса?
+target:
+  file: session/session.go
+  symbol: session.NetworkEntity
+  line: 34
+direction: incoming
+match: line
+edges:
+  - rel: implement
+    expect: must
+    from: {file: cluster/agent.go, line: 55, symbol: cluster.agent}
+    confidence: high
+    how: "Все 7 методов с нужными сигнатурами и указательным получателем: LastMid (111), Push (116), RPC (140), Response (161), ResponseMid (167), Close() error (197), RemoteAddr (222). Комментарии «implementation for session.NetworkEntity interface»."
+  - rel: implement
+    expect: must
+    from: {file: cluster/acceptor.go, line: 13, symbol: cluster.acceptor}
+    confidence: high
+    how: "Push (23), RPC (39), LastMid (55), Response (60), ResponseMid (65), Close (81), RemoteAddr (91). Используется на удалённых узлах кластера вместо agent."
+  - rel: implement
+    expect: must
+    from: {file: mock/network_entity.go, line: 44, symbol: mock.NetworkEntity}
+    confidence: high
+    how: "RPC (59), Push (65), LastMid (71), Response (76), ResponseMid (82), Close (92), RemoteAddr (97). Тестовая подделка."
+  # --- где реализация подставляется в интерфейс ---
+  - rel: reference
+    expect: may
+    from: {file: cluster/agent.go, line: 93, symbol: cluster.newAgent}
+    confidence: high
+    how: "s := session.New(a) — *agent передаётся как NetworkEntity."
+  - rel: reference
+    expect: may
+    from: {file: cluster/node.go, line: 325, symbol: cluster.(*Node).findOrCreateSession}
+    confidence: high
+    how: "s = session.New(ac) — *acceptor как NetworkEntity."
+  - rel: reference
+    expect: may
+    from: {file: cluster/handler.go, line: 380}
+    confidence: high
+    how: "switch v := session.NetworkEntity().(type) { case *agent … case *acceptor } — обратное приведение интерфейса к реализациям. То же handler.go:468."
+  # --- ловушки ---
+  - rel: implement
+    expect: must_not
+    from: {file: session/session.go, line: 53, symbol: session.Session}
+    confidence: high
+    how: "У Session почти тот же набор методов, но НЕ реализует интерфейс: ResponseMID (стр. 102) вместо ResponseMid и Close() без возврата error (стр. 133)."
+  - rel: implement
+    expect: must_not
+    from: {file: cluster/ws.go, line: 96, symbol: cluster.(*wsConn).RemoteAddr}
+    confidence: high
+    how: "wsConn реализует net.Conn (RemoteAddr), но не NetworkEntity — нет Push/RPC/…"
+notes: >
+  Неявные интерфейсы Go: в коде нет слова implements, связь выводится только по набору методов. Ловушка —
+  тип Session, который оборачивает NetworkEntity и повторяет почти все его методы, но из-за двух отличий
+  (регистр в ResponseMID и сигнатура Close) интерфейс не реализует. Строка для implement — строка объявления
+  типа (для agent — строка «agent struct {» внутри блока type (...)).

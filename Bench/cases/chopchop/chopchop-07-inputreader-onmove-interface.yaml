@@ -1,0 +1,68 @@
+schema: 1
+id: chopchop-07-inputreader-onmove-interface
+project: chopchop
+commit: 608eac98df29cd97821a6115cd52dfb9027345b1
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает InputReader.OnMove(InputAction.CallbackContext)? В проекте три метода OnMove — нужен только этот.
+target:
+  file: UOP1_Project/Assets/Scripts/Input/InputReader.cs
+  symbol: InputReader.OnMove
+  line: 131
+direction: incoming
+match: line
+scope: [UOP1_Project/Assets/]
+edges:
+  # InputReader реализует GameInput.IGameplayActions; сгенерированный GameInput подписывает методы интерфейса на InputAction
+  - rel: callback_register
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Input/GameInput.cs, line: 1910, symbol: GameInput.GameplayActions.SetCallbacks}
+    confidence: high
+    how: "@Move.started += instance.OnMove; instance имеет тип IGameplayActions, реализация — InputReader (единственный класс с этим интерфейсом, InputReader.cs:6). Вызов делает Input System."
+  - rel: callback_register
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Input/GameInput.cs, line: 1911, symbol: GameInput.GameplayActions.SetCallbacks}
+    confidence: high
+    how: "@Move.performed += instance.OnMove."
+  - rel: callback_register
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Input/GameInput.cs, line: 1912, symbol: GameInput.GameplayActions.SetCallbacks}
+    confidence: high
+    how: "@Move.canceled += instance.OnMove."
+  - rel: event_unsubscribe
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Input/GameInput.cs, line: 1879, symbol: GameInput.GameplayActions.SetCallbacks}
+    confidence: high
+    how: "@Move.started -= m_Wrapper.m_GameplayActionsCallbackInterface.OnMove (поле типа IGameplayActions). То же 1880, 1881."
+  - rel: override
+    expect: may
+    from: {file: UOP1_Project/Assets/Scripts/Input/GameInput.cs, line: 2171, symbol: GameInput.IGameplayActions.OnMove}
+    confidence: high
+    how: "Объявление метода интерфейса, который реализует target. Не вызов, но переименование target сломает компиляцию."
+  - rel: reference
+    expect: may
+    from: {file: UOP1_Project/Assets/Scripts/Input/InputReader.cs, line: 58, symbol: InputReader.OnEnable}
+    confidence: high
+    how: "_gameInput.Gameplay.SetCallbacks(this) — здесь InputReader передаётся как IGameplayActions; точка регистрации."
+  # --- ловушки: одноимённые методы ---
+  - rel: callback_register
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/Characters/Protagonist.cs, line: 41, symbol: Protagonist.OnEnable}
+    confidence: high
+    how: "MoveEvent += OnMove — это Protagonist.OnMove(Vector2) (стр. 114), другой метод."
+  - rel: callback_register
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/UI/UICreditsRoller.cs, line: 29, symbol: UICreditsRoller.OnEnable}
+    confidence: high
+    how: "MoveEvent += OnMove — это UICreditsRoller.OnMove(Vector2) (стр. 60)."
+  - rel: override
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/Input/GameInput.cs, line: 2183, symbol: GameInput.IMenusActions.OnMoveSelection}
+    confidence: high
+    how: "OnMoveSelection — совпадение по подстроке OnMove; реализация InputReader.OnMoveSelection (стр. 171)."
+notes: >
+  Вызов через интерфейс + колбэк: в коде нет ни одного «InputReader.OnMove(...)». Правильный граф должен связать
+  instance.OnMove (статический тип IGameplayActions) с реализацией в InputReader. GameInput.cs — сгенерированный
+  Input System файл (~2200 строк); инструмент, который пропускает сгенерированные файлы, эту связь потеряет.

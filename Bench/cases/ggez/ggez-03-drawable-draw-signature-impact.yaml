@@ -1,0 +1,89 @@
+schema: 1
+id: ggez-03-drawable-draw-signature-impact
+project: ggez
+commit: 9c865474504084b60204874bc028ba91c5f013b9
+languages: [rust]
+kind: impact
+trap: true
+change: signature
+question: >
+  Хочу изменить сигнатуру метода трейта Drawable::draw (например, принимать &DrawParam вместо impl Into<DrawParam>).
+  Какие реализации и вызовы придётся поправить? Трейт Drawable3d менять не собираюсь.
+target:
+  file: src/graphics/draw.rs
+  symbol: Drawable::draw
+  line: 314
+direction: incoming
+match: line
+edges:
+  - rel: override
+    expect: must
+    from: {file: src/graphics/image.rs, line: 408, symbol: "<Image as Drawable>::draw"}
+    confidence: high
+    how: "impl Drawable for Image (стр. 407)."
+  - rel: override
+    expect: must
+    from: {file: src/graphics/instance.rs, line: 309, symbol: "<InstanceArray as Drawable>::draw"}
+    confidence: high
+    how: "impl Drawable for InstanceArray (стр. 308)."
+  - rel: override
+    expect: must
+    from: {file: src/graphics/mesh.rs, line: 246, symbol: "<Mesh as Drawable>::draw"}
+    confidence: high
+    how: "impl Drawable for Mesh (стр. 245)."
+  - rel: override
+    expect: must
+    from: {file: src/graphics/mesh.rs, line: 277, symbol: "<Quad as Drawable>::draw"}
+    confidence: high
+    how: "impl Drawable for Quad (стр. 276)."
+  - rel: override
+    expect: must
+    from: {file: src/graphics/text.rs, line: 285, symbol: "<Text as Drawable>::draw"}
+    confidence: high
+    how: "impl Drawable for Text (стр. 284)."
+  - rel: call_interface
+    expect: must
+    from: {file: src/graphics/canvas.rs, line: 384, symbol: Canvas::draw}
+    confidence: high
+    how: "drawable.draw(self, param) — передаёт param дальше; при смене типа параметра меняется и тело (а возможно, и сигнатура Canvas::draw — тогда затронуты все примеры, это отдельная правка)."
+  - rel: call
+    expect: must
+    from: {file: src/graphics/mesh.rs, line: 278, symbol: "<Quad as Drawable>::draw"}
+    confidence: high
+    how: "…mesh.clone().draw(canvas, param) — вызов Mesh::draw."
+  - rel: call_interface
+    expect: must
+    from: {file: src/graphics/mod.rs, line: 105, symbol: graphics::draw}
+    confidence: high
+    how: "Устаревшая функция-обёртка drawable.draw(canvas, param)."
+  - rel: call
+    expect: must
+    from: {file: src/graphics/mod.rs, line: 178, symbol: graphics::draw_queued_text}
+    confidence: high
+    how: "queued_text.0.draw(canvas, param.dest(…)) — <Text as Drawable>::draw."
+  # --- ловушки: параллельный трейт Drawable3d и одноимённые методы ---
+  - rel: override
+    expect: must_not
+    from: {file: src/graphics/instance3d.rs, line: 311, symbol: "<InstanceArray3d as Drawable3d>::draw"}
+    confidence: high
+    how: "impl Drawable3d for InstanceArray3d — другой трейт (draw3d.rs:357). Аналогично mesh3d.rs (Mesh3d, Model)."
+  - rel: override
+    expect: must_not
+    from: {file: examples/3dshapes.rs, line: 19, symbol: "<PosMesh as Drawable3d>::draw"}
+    confidence: high
+    how: "impl Drawable3d for PosMesh — Drawable3d, не Drawable."
+  - rel: call_interface
+    expect: must_not
+    from: {file: src/graphics/canvas3d.rs, line: 351, symbol: Canvas3d::draw}
+    confidence: high
+    how: "drawable: &impl Drawable3d."
+  - rel: override
+    expect: must_not
+    from: {file: examples/04_snake.rs, line: 191, symbol: Food::draw}
+    confidence: high
+    how: "Собственный метод Food::draw(&self, canvas) с похожей сигнатурой, не реализация трейта. То же Snake::draw (стр. 322)."
+notes: >
+  Трейт с пятью реализациями внутри крейта и параллельным трейтом Drawable3d с почти такой же сигнатурой
+  (draw(&self, canvas: &mut Canvas3d, param: impl Into<DrawParam3d>)). grep «fn draw(&self, canvas» даёт 10 строк,
+  из них 5 — нужные реализации. Примеры (examples/*.rs) Drawable не реализуют и Drawable::draw напрямую не вызывают
+  (только через Canvas::draw), поэтому при сохранении сигнатуры Canvas::draw их менять не нужно.

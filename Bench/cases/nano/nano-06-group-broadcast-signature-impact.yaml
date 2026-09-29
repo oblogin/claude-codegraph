@@ -1,0 +1,84 @@
+schema: 1
+id: nano-06-group-broadcast-signature-impact
+project: nano
+commit: dbf22c701d271c5dcdb647df375320a9986b83d5
+languages: [go]
+kind: impact
+trap: true
+change: signature
+question: >
+  Хочу изменить сигнатуру (*nano.Group).Broadcast (например, добавить context.Context первым параметром).
+  Какие вызовы придётся исправить и какие тесты это покрывают?
+target:
+  file: group.go
+  symbol: nano.(*Group).Broadcast
+  line: 133
+direction: incoming
+match: line
+edges:
+  - rel: call
+    expect: must
+    from: {file: examples/cluster/chat/chat_service.go, line: 33, symbol: chat.(*RoomService).JoinRoom}
+    confidence: high
+    how: "rs.group — поле group *nano.Group (стр. 16)."
+  - rel: call
+    expect: must
+    from: {file: examples/cluster/chat/chat_service.go, line: 51, symbol: chat.(*RoomService).SyncMessage}
+    confidence: high
+    how: "rs.group.Broadcast(\"onMessage\", msg)."
+  - rel: call
+    expect: must
+    from: {file: examples/customerroute/tworoom/chat_service.go, line: 34, symbol: tworoom.(*ChatRoomService).SyncMessage}
+    confidence: high
+    how: "rs.group — *nano.Group."
+  - rel: call
+    expect: must
+    from: {file: examples/demo/chat/main.go, line: 121, symbol: main.(*RoomManager).Join}
+    confidence: high
+    how: "room.group — поле Room.group *nano.Group."
+  - rel: call
+    expect: must
+    from: {file: examples/demo/chat/main.go, line: 133, symbol: main.(*RoomManager).Message}
+    confidence: high
+    how: "room.group.Broadcast(\"onMessage\", msg)."
+  - rel: call
+    expect: must
+    from: {file: examples/demo/tadpole/logic/world.go, line: 31, symbol: logic.(*World).Init}
+    confidence: high
+    how: "w.Broadcast — у World нет своего Broadcast: World встраивает *nano.Group (стр. 15–18), метод продвигается. внутри колбэка session.Lifetime.OnClosed(func…) в Init."
+  - rel: call
+    expect: must
+    from: {file: examples/demo/tadpole/logic/world.go, line: 45, symbol: logic.(*World).Update}
+    confidence: high
+    how: "w.Broadcast — у World нет своего Broadcast: World встраивает *nano.Group (стр. 15–18), метод продвигается. return w.Broadcast(\"update\", msg)."
+  - rel: call
+    expect: must
+    from: {file: examples/demo/tadpole/logic/world.go, line: 51, symbol: logic.(*World).Message}
+    confidence: high
+    how: "w.Broadcast — у World нет своего Broadcast: World встраивает *nano.Group (стр. 15–18), метод продвигается. return w.Broadcast(\"message\", msg)."
+  # --- тесты ---
+  - rel: test
+    expect: may
+    from: {file: group_test.go, line: 10, symbol: nano.TestChannel_Add}
+    confidence: high
+    how: "Единственный тест Group; Broadcast не вызывает (только Add/Count/Contains/LeaveAll). Прогнать стоит, но исправлять не нужно. Тестов на Broadcast в проекте нет."
+  # --- ловушки ---
+  - rel: call
+    expect: must_not
+    from: {file: group.go, line: 103, symbol: nano.(*Group).Multicast}
+    confidence: high
+    how: "Соседний метод Multicast(route, v, filter) — не вызывает Broadcast (дублирует цикл рассылки)."
+  - rel: reference
+    expect: must_not
+    from: {file: examples/cluster/protocol/client.go, line: 3, symbol: protocol.NewUserBroadcast}
+    confidence: high
+    how: "Тип сообщения NewUserBroadcast — совпадение по подстроке."
+  - rel: string_ref
+    expect: may
+    from: {file: examples/demo/tadpole/static/js/StarXService.js, line: 92}
+    confidence: medium
+    how: "Клиент подписан на маршрут \"update\", который шлёт w.Broadcast(\"update\", …). Сигнатура Go-метода на клиента не влияет, но при смене route — затронет. Аналогично starx.on('onMessage'/'onNewUser') в web/index.html примеров."
+notes: >
+  Главная ловушка — продвижение метода через встраивание: в tadpole вызов записан как w.Broadcast, где w *World,
+  а у World нет своего Broadcast. Инструмент, который ищет только «.group.Broadcast» или методы с получателем
+  *Group, пропустит 3 вызова из 8. Тестов на Broadcast нет — хороший инструмент не должен их «придумывать».

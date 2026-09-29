@@ -1,0 +1,217 @@
+schema: 1
+id: chopchop-08-stateaction-onupdate-impact
+project: chopchop
+commit: 608eac98df29cd97821a6115cd52dfb9027345b1
+languages: [csharp]
+kind: impact
+trap: true
+change: signature
+question: >
+  Хочу добавить параметр (например, float deltaTime) в абстрактный метод StateAction.OnUpdate().
+  Какие места придётся поменять?
+target:
+  file: UOP1_Project/Assets/Scripts/StateMachine/Core/StateAction.cs
+  symbol: UOP1.StateMachine.StateAction.OnUpdate
+  line: 20
+direction: incoming
+match: line
+line_tolerance: 1
+scope: [UOP1_Project/Assets/]
+edges:
+  - rel: call_virtual
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/StateMachine/Core/State.cs, line: 40, symbol: UOP1.StateMachine.State.OnUpdate}
+    confidence: high
+    how: "_actions[i].OnUpdate(); _actions — StateAction[]. Единственный вызов через базовый класс."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/AerialMovementActionSO.cs, line: 33, symbol: AerialMovementAction.OnUpdate}
+    confidence: high
+    how: "class AerialMovementAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/AnimatorMoveSpeedActionSO.cs, line: 38, symbol: AnimatorMoveSpeedAction.OnUpdate}
+    confidence: high
+    how: "class AnimatorMoveSpeedAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/AnimatorParameterActionSO.cs, line: 78, symbol: AnimatorParameterAction.OnUpdate}
+    confidence: high
+    how: "class AnimatorParameterAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/ApplyMovementVectorActionSO.cs, line: 20, symbol: ApplyMovementVectorAction.OnUpdate}
+    confidence: high
+    how: "class ApplyMovementVectorAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/AscendActionSO.cs, line: 31, symbol: AscendAction.OnUpdate}
+    confidence: high
+    how: "class AscendAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/ChangeGameStateActionSO.cs, line: 73, symbol: ChangeGameStateAction.OnUpdate}
+    confidence: high
+    how: "class ChangeGameStateAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/ChasingTargetActionSO.cs, line: 37, symbol: ChasingTargetAction.OnUpdate}
+    confidence: high
+    how: "class ChasingTargetAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/ClearInputCache_OnEnterSO.cs, line: 22, symbol: ClearInputCache_OnEnter.OnUpdate}
+    confidence: high
+    how: "class ClearInputCache_OnEnter : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/ControlWalkingParticlesActionSO.cs, line: 28, symbol: ControlWalkingParticlesAction.OnUpdate}
+    confidence: high
+    how: "class ControlWalkingParticlesAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/CritterFaceProtagonistSO.cs, line: 22, symbol: CritterFaceProtagonist.OnUpdate}
+    confidence: high
+    how: "class CritterFaceProtagonist : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/DescendActionSO.cs, line: 29, symbol: DescendAction.OnUpdate}
+    confidence: high
+    how: "class DescendAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/DestroyEntitySO.cs, line: 20, symbol: DestroyEntity.OnUpdate}
+    confidence: high
+    how: "class DestroyEntity : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/DropRewardSO.cs, line: 23, symbol: DropReward.OnUpdate}
+    confidence: high
+    how: "class DropReward : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/GetHitFlashingEffectActionSO.cs, line: 35, symbol: GetHitFlashingEffectAction.OnUpdate}
+    confidence: high
+    how: "class GetHitFlashingEffectAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/GroundGravityActionSO.cs, line: 24, symbol: GroundGravityAction.OnUpdate}
+    confidence: high
+    how: "class GroundGravityAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/HorizontalMoveActionSO.cs, line: 23, symbol: HorizontalMoveAction.OnUpdate}
+    confidence: high
+    how: "class HorizontalMoveAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/MovementActions/PathwayMovementAction.cs, line: 23, symbol: PathwayMovementAction.OnUpdate}
+    confidence: high
+    how: "class PathwayMovementAction : NPCMovementAction — переопределяет NPCMovementAction.OnUpdate (другой абстрактный метод с тем же именем), к StateAction не относится."
+  - rel: override
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/MovementActions/RoamingMovementAction.cs, line: 32, symbol: RoamingMovementAction.OnUpdate}
+    confidence: high
+    how: "class RoamingMovementAction : NPCMovementAction — переопределяет NPCMovementAction.OnUpdate (другой абстрактный метод с тем же именем), к StateAction не относится."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/NPCFaceProtagonistSO.cs, line: 24, symbol: NPCFaceProtagonist.OnUpdate}
+    confidence: high
+    how: "class NPCFaceProtagonist : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/NPCMoveToNextDestinationSO.cs, line: 35, symbol: NPCMoveToNextDestination.OnUpdate}
+    confidence: high
+    how: "class NPCMoveToNextDestination : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/PlayAudioCueActionSO.cs, line: 26, symbol: PlayAudioCueAction.OnUpdate}
+    confidence: high
+    how: "class PlayAudioCueAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/PlayJumpParticlesActionSO.cs, line: 23, symbol: PlayJumpParticlesAction.OnUpdate}
+    confidence: high
+    how: "class PlayJumpParticlesAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/PlayLandParticlesActionSO.cs, line: 47, symbol: PlayLandParticlesAction.OnUpdate}
+    confidence: high
+    how: "class PlayLandParticlesAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/PlayLiftoffJumpParticlesActionSO.cs, line: 25, symbol: PlayLiftoffJumpParticlesAction.OnUpdate}
+    confidence: high
+    how: "class PlayLiftoffJumpParticlesAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/RaiseVoidEventActionSO.cs, line: 21, symbol: RaiseVoidEventAction.OnUpdate}
+    confidence: high
+    how: "class RaiseVoidEventAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/ResetGetHitStateSO.cs, line: 20, symbol: ResetGetHitState.OnUpdate}
+    confidence: high
+    how: "class ResetGetHitState : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/ResetHealthSO.cs, line: 20, symbol: ResetHealth.OnUpdate}
+    confidence: high
+    how: "class ResetHealth : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/RotateActionSO.cs, line: 28, symbol: RotateAction.OnUpdate}
+    confidence: high
+    how: "class RotateAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/ShakeCamActionSO.cs, line: 20, symbol: ShakeCamAction.OnUpdate}
+    confidence: high
+    how: "class ShakeCamAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/SlideActionSO.cs, line: 17, symbol: SlideAction.OnUpdate}
+    confidence: high
+    how: "class SlideAction : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/StopAgentSO.cs, line: 23, symbol: StopAgent.OnUpdate}
+    confidence: high
+    how: "class StopAgent : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/StopMovementActionSO.cs, line: 27, symbol: StopMovement.OnUpdate}
+    confidence: high
+    how: "class StopMovement : StateAction — override обязан сменить сигнатуру."
+  - rel: override
+    expect: may
+    from: {file: UOP1_Project/Assets/Scripts/StateMachine/Editor/Templates/StateAction.txt, line: 19}
+    confidence: high
+    how: "Шаблон нового скрипта действия (меню Create → State Machine Action, ScriptTemplates.cs): «public override void OnUpdate()». Не код, но его нужно обновить, иначе новые действия не скомпилируются."
+  # --- ловушки ---
+  - rel: call
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/StateMachine/Core/StateMachine.cs, line: 89, symbol: UOP1.StateMachine.StateMachine.Update}
+    confidence: high
+    how: "_currentState.OnUpdate() — это State.OnUpdate (обычный метод класса State, State.cs:37), не StateAction."
+  - rel: call_virtual
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/NPCMoveToNextDestinationSO.cs, line: 37, symbol: NPCMoveToNextDestination.OnUpdate}
+    confidence: high
+    how: "_action.OnUpdate(); поле _action имеет тип NPCMovementAction (стр. 16) — другой абстрактный класс. Сам метод-обёртка NPCMoveToNextDestination.OnUpdate (стр. 35) — must (переопределяет StateAction), а вызов в нём — нет."
+  - rel: override
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/MovementActions/NPCMovementAction.cs, line: 6, symbol: NPCMovementAction.OnUpdate}
+    confidence: high
+    how: "public abstract void OnUpdate() в собственном абстрактном классе NPCMovementAction, не наследник StateAction."
+  - rel: reference
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/Characters/StateMachine/Actions/StopMovementActionSO.cs, line: 29, symbol: StopMovement.OnUpdate}
+    confidence: high
+    how: "SpecificMoment.OnUpdate — член перечисления StateAction.SpecificMoment (StateAction.cs:37), совпадение по имени. Сама строка лежит в методе, который must (StopMovement.OnUpdate, стр. 27), поэтому match: line."
+notes: >
+  30 переопределений StateAction.OnUpdate (29 в Characters/StateMachine/Actions/*SO.cs, все в классах «XxxAction : StateAction»,
+  объявленных в тех же файлах, что и их XxxActionSO) и один вызов через базовый класс. Ловушки: одноимённый
+  метод State.OnUpdate, отдельная иерархия NPCMovementAction с тем же именем абстрактного метода и член enum
+  SpecificMoment.OnUpdate. grep «OnUpdate» даёт ~40 строк, из них 31 нужная.
+  Тестов в проекте нет (нет сборок *.Tests и NUnit; Pool/Example/*Tester.cs — демонстрационные MonoBehaviour), тестовые файлы в эталон не входят.

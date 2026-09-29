@@ -1,0 +1,217 @@
+schema: 1
+id: chopchop-09-zonetrigger-enterzone-rename
+project: chopchop
+commit: 608eac98df29cd97821a6115cd52dfb9027345b1
+languages: [csharp, unity-yaml]
+kind: impact
+trap: false
+change: rename
+question: >
+  Хочу переименовать сериализованное поле ZoneTriggerController._enterZone (UnityEvent зоны-триггера).
+  Какие файлы затронет переименование и где пропадут настройки, если забыть [FormerlySerializedAs]?
+target:
+  file: UOP1_Project/Assets/Scripts/Characters/ZoneTriggerController.cs
+  symbol: ZoneTriggerController._enterZone
+  line: 13
+direction: incoming
+match: file
+scope: [UOP1_Project/Assets/]
+edges:
+  - rel: reference
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/ZoneTriggerController.cs, line: 20, symbol: ZoneTriggerController.OnTriggerEnter}
+    confidence: high
+    how: "_enterZone.Invoke(true, …); также стр. 28 в OnTriggerExit. Использований поля в других .cs нет (поле private)."
+  - rel: serialized_field
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/Critters/TriggerZone.prefab, line: 60, fileID: "96998187169542721", object: AlertZone}
+    confidence: high
+    how: "Тело компонента (m_Script 7eb40f37… = ZoneTriggerController.cs): ключ «_enterZone:» с m_PersistentCalls."
+  - rel: serialized_field
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/PigChef.prefab, line: 748, fileID: "8408749132940338571", object: InteractionDetector}
+    confidence: high
+    how: "Компонент ZoneTriggerController на InteractionDetector игрока: «_enterZone:» → InteractionManager.OnTriggerChangeDetected (стр. 753). После переименования без FormerlySerializedAs игрок перестанет замечать интерактивные объекты."
+  - rel: serialized_field
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/NPCs_BasePrefabs/Gluecose.prefab, line: 238}
+    confidence: high
+    how: "Переопределения во вложенных экземплярах TriggerZone.prefab (TriggerZone_Attack и TriggerZone_Alert): propertyPath «_enterZone.m_PersistentCalls.m_Calls.Array.data[0].…» в строках 238,243,391,396. При переименовании поля эти переопределения станут «висячими», и враг перестанет реагировать на игрока (см. chopchop-03)."
+  - rel: serialized_field
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/NPCs_BasePrefabs/Groen.prefab, line: 254}
+    confidence: high
+    how: "Переопределения во вложенных экземплярах TriggerZone.prefab (TriggerZone_Attack и TriggerZone_Alert): propertyPath «_enterZone.m_PersistentCalls.m_Calls.Array.data[0].…» в строках 254,259,333,338. При переименовании поля эти переопределения станут «висячими», и враг перестанет реагировать на игрока (см. chopchop-03)."
+  - rel: serialized_field
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/NPCs_BasePrefabs/Klipper.prefab, line: 360}
+    confidence: high
+    how: "Переопределения во вложенных экземплярах TriggerZone.prefab (TriggerZone_Attack и TriggerZone_Alert): propertyPath «_enterZone.m_PersistentCalls.m_Calls.Array.data[0].…» в строках 360,365,370,429,434,439. При переименовании поля эти переопределения станут «висячими», и враг перестанет реагировать на игрока (см. chopchop-03)."
+  # --- транзитивно: варианты и сцены с этими префабами (файлы менять не нужно, но поведение сломается) ---
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Prefabs/Characters/NPCs_Unique/Gluecose_FarmAttack.prefab"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Prefabs/Characters/NPCs_Unique/Klipper_TerraRequest.prefab"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Prefabs/Characters/NPCs_Unique/MountainRockCritter Variant.prefab"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Prefabs/Characters/NPCs_Unique/PlantCritter.prefab"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Prefabs/Cutscenes/BeachCandyCutscene.prefab"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Prefabs/Cutscenes/BeachGameEndCutscene.prefab"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Prefabs/Cutscenes/BeachIntroCutscene.prefab"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Prefabs/Cutscenes/SlimeCritterCutscene.prefab"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Prefabs/Cutscenes/SweetDishCutscene.prefab"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Prefabs/_SceneChunks/Interactables/Interactables_Cave.prefab"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Prefabs/_SceneChunks/Interactables/Interactables_Farms.prefab"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Prefabs/_SceneChunks/Interactables/Interactables_Hill.prefab"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Examples/CutsceneExample.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Locations/Beach.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Locations/Beach_Night.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Locations/Field_Farms.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Locations/Field_Hill.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Locations/Mountain_Cave.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Locations/Town_Upper.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/WIP/ArtShowcase.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/WIP/NightGround.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/WIP/SunsetGround.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/WIP/TestingGround.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/WIP/TestingGround_Questline.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Whiteboxing/Community/Forest/Proposal_3/MazeTiles/East.prefab"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Whiteboxing/Community/Forest/Proposal_3/MazeTiles/South.prefab"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Whiteboxing/Community/Forest/Proposal_3/Scene_FiniteForest/FiniteForest.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Whiteboxing/Community/Forest/Proposal_3/Scene_InfiniteForest/InfiniteForest.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Whiteboxing/Community/Forest/Proposal_3/Scene_TransitionArea/TransitionArea.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Whiteboxing/Community/GeneralMapMediumMultipleScenes/Forest.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Whiteboxing/Community/Path_and_Cave/PathAndCave.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+  - rel: script_via_prefab
+    expect: may
+    from: {file: "UOP1_Project/Assets/Scenes/Whiteboxing/Community/Path_and_Cave/PathAndCave_Reduced.unity"}
+    confidence: high
+    how: "Через вложенный префаб/вариант содержит TriggerZone.prefab (враги) или PigChef.prefab; своих данных _enterZone в файле нет."
+notes: >
+  Сценарий «переименование сериализованного поля». Код меняется в одном файле, а данные поля лежат в 5 префабах:
+  в TriggerZone.prefab и PigChef.prefab — в теле компонента, в трёх префабах врагов — только как propertyPath
+  переопределений вложенного экземпляра (grep по имени поля их найдёт, но граф, который разбирает лишь тела
+  MonoBehaviour, — нет). Транзитивные файлы (32: варианты, чанки сцен, катсцены, сцены) — may: править их не нужно,
+  но поведение в них сломается. В 5 катсценах у экземпляра PigChef удалены Protagonist/Damageable и др., но
+  ZoneTriggerController (8408749132940338571) не удалён, поэтому катсцены тоже в списке may.

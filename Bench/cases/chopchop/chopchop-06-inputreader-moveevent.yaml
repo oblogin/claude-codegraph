@@ -1,0 +1,63 @@
+schema: 1
+id: chopchop-06-inputreader-moveevent
+project: chopchop
+commit: 608eac98df29cd97821a6115cd52dfb9027345b1
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто подписан на событие InputReader.MoveEvent и кто его вызывает? Какие методы получат управление,
+  когда игрок двигает стик?
+target:
+  file: UOP1_Project/Assets/Scripts/Input/InputReader.cs
+  symbol: InputReader.MoveEvent
+  line: 23
+direction: incoming
+match: line
+scope: [UOP1_Project/Assets/]
+edges:
+  - rel: event_emit
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Input/InputReader.cs, line: 133, symbol: InputReader.OnMove}
+    confidence: high
+    how: "MoveEvent.Invoke(context.ReadValue<Vector2>()) внутри колбэка Input System."
+  - rel: event_subscribe
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/Protagonist.cs, line: 41, symbol: Protagonist.OnEnable}
+    confidence: high
+    how: "_inputReader.MoveEvent += OnMove; поле _inputReader имеет тип InputReader (стр. 9). Обработчик — Protagonist.OnMove (стр. 114)."
+  - rel: event_unsubscribe
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/Characters/Protagonist.cs, line: 53, symbol: Protagonist.OnDisable}
+    confidence: high
+    how: "_inputReader.MoveEvent -= OnMove."
+  - rel: event_subscribe
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/UI/UICreditsRoller.cs, line: 29, symbol: UICreditsRoller.OnEnable}
+    confidence: high
+    how: "_inputReader.MoveEvent += OnMove; обработчик UICreditsRoller.OnMove (стр. 60)."
+  - rel: event_unsubscribe
+    expect: must
+    from: {file: UOP1_Project/Assets/Scripts/UI/UICreditsRoller.cs, line: 34, symbol: UICreditsRoller.OnDisable}
+    confidence: high
+    how: "_inputReader.MoveEvent -= OnMove."
+  # --- ловушки: похожие имена событий (подстрока MoveEvent) ---
+  - rel: event_subscribe
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/Camera/CameraManager.cs, line: 26, symbol: CameraManager.OnEnable}
+    confidence: high
+    how: "inputReader.CameraMoveEvent += OnCameraMove — другое событие (CameraMoveEvent, стр. 24 InputReader). То же CameraManager.cs:38."
+  - rel: event_subscribe
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/Menu/MenuSelectionHandler.cs, line: 14, symbol: MenuSelectionHandler.OnEnable}
+    confidence: high
+    how: "_inputReader.MenuMouseMoveEvent += HandleMoveCursor — другое событие. То же MenuSelectionHandler.cs:22."
+  - rel: event_emit
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/Input/InputReader.cs, line: 157, symbol: InputReader.OnRotateCamera}
+    confidence: high
+    how: "CameraMoveEvent.Invoke(...) — другое событие. Аналогично MenuMouseMoveEvent.Invoke в стр. 194. Объемлющий метод — InputReader.OnRotateCamera (стр. 155) и OnMouseMove (стр. 191)."
+notes: >
+  Непрямой вызов через C#-событие (UnityAction). Цепочка целиком: Input System → GameInput.GameplayActions
+  (колбэк интерфейса IGameplayActions.OnMove, см. chopchop-07) → InputReader.OnMove → MoveEvent.Invoke →
+  Protagonist.OnMove / UICreditsRoller.OnMove. Отписки (-=) считаются must: при переименовании события они тоже ломаются.

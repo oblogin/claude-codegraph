@@ -1,0 +1,91 @@
+schema: 1
+id: excalibur-03-entity-oninitialize-trap
+project: excalibur
+commit: 760a28a8544d477a496cbb72a14ac68ff9583354
+languages: [ts]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Entity.onInitialize и кто его переопределяет? (В движке onInitialize есть ещё у Engine, Scene,
+  Camera, Director и DefaultLoader — это другие методы.)
+target:
+  file: src/engine/entity-component-system/entity.ts
+  symbol: Entity.onInitialize
+  line: 604
+direction: incoming
+match: line
+scope: [src/engine/]
+edges:
+  - rel: call_virtual
+    expect: must
+    from: {file: src/engine/entity-component-system/entity.ts, line: 542, symbol: Entity._initialize}
+    confidence: high
+    how: "this.onInitialize(engine) — виртуальный вызов; реально попадает в переопределения ниже."
+  - rel: override
+    expect: must
+    from: {file: src/engine/actor.ts, line: 767, symbol: Actor.onInitialize}
+    confidence: high
+    how: "class Actor extends Entity (стр. 280); public override onInitialize."
+  - rel: override
+    expect: must
+    from: {file: src/engine/director/cross-fade.ts, line: 34, symbol: CrossFade.onInitialize}
+    confidence: high
+    how: "CrossFade extends Transition (стр. 18), Transition extends Entity (transition.ts:54)."
+  - rel: override
+    expect: must
+    from: {file: src/engine/director/fade-in-out.ts, line: 24, symbol: FadeInOut.onInitialize}
+    confidence: high
+    how: "FadeInOut extends Transition → Entity."
+  - rel: override
+    expect: must
+    from: {file: src/engine/director/slide.ts, line: 63, symbol: Slide.onInitialize}
+    confidence: high
+    how: "Slide extends Transition → Entity."
+  # --- непрямые звенья (кто вызывает _initialize) ---
+  - rel: call
+    expect: may
+    from: {file: src/engine/entity-component-system/entity.ts, line: 654, symbol: Entity.update}
+    confidence: high
+    how: "this._initialize(engine) в начале update — ленивая инициализация сущности перед первым кадром."
+  - rel: call
+    expect: may
+    from: {file: src/engine/actor.ts, line: 778, symbol: Actor._initialize}
+    confidence: high
+    how: "super._initialize(engine) и далее child._initialize (стр. 780)."
+  - rel: implement
+    expect: may
+    from: {file: src/engine/interfaces/lifecycle-events.ts, line: 43, symbol: OnInitialize.onInitialize}
+    confidence: high
+    how: "Entity implements OnInitialize (entity.ts:93) — объявление в интерфейсе, которое реализует target."
+  # --- ловушки: одноимённые onInitialize других классов ---
+  - rel: override
+    expect: must_not
+    from: {file: src/engine/director/loader.ts, line: 238, symbol: Loader.onInitialize}
+    confidence: high
+    how: "Loader extends DefaultLoader (стр. 93); DefaultLoader НЕ наследует Entity (default-loader.ts:47 implements Loadable). Это override DefaultLoader.onInitialize (default-loader.ts:76)."
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/engine.ts, line: 2113, symbol: Engine.load}
+    confidence: high
+    how: "this._loader.onInitialize(this) — _loader: DefaultLoader."
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/engine.ts, line: 1740, symbol: Engine._overrideInitialize}
+    confidence: high
+    how: "await this.onInitialize(engine) — Engine.onInitialize (стр. 1720). Рядом стр. 1739 — director.onInitialize() (Director.onInitialize, director.ts:179), тоже must_not."
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/scene.ts, line: 385, symbol: Scene._initialize}
+    confidence: high
+    how: "await this.onInitialize(engine) — Scene.onInitialize (стр. 265); Scene не наследует Entity (scene.ts:114)."
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/camera.ts, line: 689, symbol: Camera._initialize}
+    confidence: high
+    how: "this.onInitialize(engine) — Camera.onInitialize (стр. 700); class Camera implements CanUpdate, CanInitialize (стр. 264), не Entity."
+notes: >
+  Методы onInitialize есть у Entity (и 4 наследников), Engine, Scene, Camera, Director, DefaultLoader/Loader. grep «onInitialize(» по src/engine вне комментариев даёт 19 строк, нужных — 5.
+  Правильный ответ требует иерархии классов: Transition → Entity, но Loader → DefaultLoader (не Entity),
+  Scene/Camera/Engine реализуют интерфейс CanInitialize, а не наследуют Entity. Интерфейс CanInitialize
+  (lifecycle-events.ts:103) объявляет тот же метод для Actor/Scene/Camera/Engine — связь через него в эталон
+  не включена (структурная типизация TS: это «тот же» метод только для Actor).

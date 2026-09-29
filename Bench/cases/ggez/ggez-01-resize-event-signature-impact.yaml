@@ -1,0 +1,62 @@
+schema: 1
+id: ggez-01-resize-event-signature-impact
+project: ggez
+commit: 9c865474504084b60204874bc028ba91c5f013b9
+languages: [rust]
+kind: impact
+trap: false
+change: signature
+question: >
+  Хочу поменять сигнатуру метода трейта EventHandler::resize_event (например, передавать PhysicalSize вместо
+  двух f32). Что придётся изменить: вызовы, реализации в примерах, прочее?
+target:
+  file: src/event.rs
+  symbol: EventHandler::resize_event
+  line: 248
+direction: incoming
+match: line
+edges:
+  - rel: call_interface
+    expect: must
+    from: {file: src/event.rs, line: 357, symbol: "<GgezApplicationHandler<S, C, E> as ApplicationHandler>::window_event"}
+    confidence: high
+    how: "self.state.resize_event(&mut self.ctx, w, h) — state: S, где S: EventHandler<C, E> (стр. 304–306); статическая диспетчеризация через дженерик, реальная цель — реализация в типе игры."
+  - rel: override
+    expect: must
+    from: {file: examples/3d.rs, line: 95, symbol: "<MainState as EventHandler>::resize_event"}
+    confidence: high
+    how: "impl event::EventHandler for MainState переопределяет метод с реализацией по умолчанию; сигнатура должна совпасть с трейтом."
+  - rel: override
+    expect: must
+    from: {file: examples/3dinstance.rs, line: 33, symbol: "<MainState as EventHandler>::resize_event"}
+    confidence: high
+    how: "impl event::EventHandler for MainState переопределяет метод с реализацией по умолчанию; сигнатура должна совпасть с трейтом."
+  - rel: override
+    expect: must
+    from: {file: examples/3dshapes.rs, line: 68, symbol: "<MainState as EventHandler>::resize_event"}
+    confidence: high
+    how: "impl event::EventHandler for MainState переопределяет метод с реализацией по умолчанию; сигнатура должна совпасть с трейтом."
+  - rel: override
+    expect: must
+    from: {file: examples/3dtexture.rs, line: 51, symbol: "<MainState as EventHandler>::resize_event"}
+    confidence: high
+    how: "impl event::EventHandler for MainState переопределяет метод с реализацией по умолчанию; сигнатура должна совпасть с трейтом."
+  - rel: override
+    expect: must
+    from: {file: examples/graphics_settings.rs, line: 182, symbol: "<MainState as EventHandler>::resize_event"}
+    confidence: high
+    how: "impl event::EventHandler for MainState переопределяет метод с реализацией по умолчанию; сигнатура должна совпасть с трейтом."
+  - rel: reference
+    expect: may
+    from: {file: src/event.rs, line: 367, symbol: "<GgezApplicationHandler<S, C, E> as ApplicationHandler>::window_event"}
+    confidence: high
+    how: "ErrorOrigin::ResizeEvent в обработке ошибки этого вызова — менять не нужно, но это та же точка."
+  - rel: reference
+    expect: may
+    from: {file: src/event.rs, line: 75}
+    confidence: high
+    how: "Док-комментарий варианта ErrorOrigin::ResizeEvent («error originated in `resize_event()`»)."
+notes: >
+  Метод трейта с реализацией по умолчанию: примеры, которые его не переопределяют, менять не нужно (их ~25) —
+  инструмент не должен выдавать все impl EventHandler. Вызов один — через дженерик S: EventHandler в цикле событий
+  winit. Док-тесты (doc_tests собирает README и docs/guides через skeptic) resize_event не используют — проверено grep.

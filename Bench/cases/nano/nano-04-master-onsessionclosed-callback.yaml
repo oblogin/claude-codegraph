@@ -1,0 +1,64 @@
+schema: 1
+id: nano-04-master-onsessionclosed-callback
+project: nano
+commit: dbf22c701d271c5dcdb647df375320a9986b83d5
+languages: [go]
+kind: consumers
+trap: true
+question: >
+  Кто и когда вызывает функцию master.OnSessionClosed (examples/cluster/master)? В проекте три функции
+  OnSessionClosed в разных пакетах и gRPC-метод SessionClosed.
+target:
+  file: examples/cluster/master/init.go
+  symbol: master.OnSessionClosed
+  line: 21
+direction: incoming
+match: line
+edges:
+  - rel: callback_register
+    expect: must
+    from: {file: examples/cluster/main.go, line: 107, symbol: main.runMaster}
+    confidence: high
+    how: "session.Lifetime.OnClosed(master.OnSessionClosed) — функция передаётся значением; сохраняется в lifetime.onClosed (session/lifetime.go:20)."
+  - rel: callback_invoke
+    expect: must
+    from: {file: session/lifetime.go, line: 29, symbol: session.(*lifetime).Close}
+    confidence: high
+    how: "for _, h := range lt.onClosed { h(s) } — здесь вызывается каждый зарегистрированный колбэк, в том числе master.OnSessionClosed (в процессе, запущенном командой master)."
+  # --- кто запускает lifetime.Close (следующее звено цепочки) ---
+  - rel: call
+    expect: may
+    from: {file: cluster/agent.go, line: 214, symbol: cluster.(*agent).Close}
+    confidence: high
+    how: "scheduler.PushTask(func() { session.Lifetime.Close(a.session) }) — при закрытии клиентского соединения."
+  - rel: call
+    expect: may
+    from: {file: cluster/node.go, line: 407, symbol: cluster.(*Node).SessionClosed}
+    confidence: high
+    how: "gRPC-обработчик: другой узел кластера сообщил о закрытии сессии → session.Lifetime.Close(s)."
+  # --- ловушки ---
+  - rel: callback_register
+    expect: must_not
+    from: {file: examples/cluster/main.go, line: 173, symbol: main.runChat}
+    confidence: high
+    how: "session.Lifetime.OnClosed(chat.OnSessionClosed) — функция из пакета chat (examples/cluster/chat/init.go:19), другая."
+  - rel: callback_register
+    expect: must_not
+    from: {file: examples/customerroute/main.go, line: 168}
+    confidence: high
+    how: "session.Lifetime.OnClosed(tworoom.OnSessionClosed) — пакет tworoom, другая программа."
+  - rel: reference
+    expect: must_not
+    from: {file: examples/cluster/chat/init.go, line: 19, symbol: chat.OnSessionClosed}
+    confidence: high
+    how: "Одноимённая функция другого пакета."
+  - rel: call
+    expect: must_not
+    from: {file: cluster/handler.go, line: 229}
+    confidence: high
+    how: "client.SessionClosed(...) — gRPC-вызов MemberClient.SessionClosed (совпадение по подстроке SessionClosed)."
+notes: >
+  Колбэк через значение функции: регистрация (main.go:107) и вызов через срез функций (lifetime.go:29).
+  Ловушки — одноимённые функции в пакетах chat и tworoom и gRPC SessionClosed. Колбэк lifetime.go:29
+  вызывает все зарегистрированные функции: для master.OnSessionClosed это верно только в процессе master
+  (runMaster), но статически связь одна и та же — засчитываем как must.

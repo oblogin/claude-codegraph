@@ -1,0 +1,53 @@
+# Реестр проектов набора проверок (F-02).
+# Клоны лежат в Bench/projects/<name>/ и в git не попадают (см. .gitignore).
+# Эталоны в Bench/cases/<name>/ ссылаются на проект по ключу `name` и на коммит.
+# Как клонировать — см. Bench/README.md, раздел «Проекты».
+
+schema: 1
+projects:
+  - name: chopchop
+    source: git
+    url: https://github.com/UnityTechnologies/open-project-1.git
+    commit: 608eac98df29cd97821a6115cd52dfb9027345b1   # 2022-06-26, ветка main
+    root: UOP1_Project            # корень Unity-проекта внутри репозитория
+    languages: [csharp, unity-yaml]
+    license: Apache-2.0
+    unity_version: 2020.3.17f1
+    clone: partial                # --depth 1 --filter=blob:none + sparse (только текстовые файлы, см. README)
+    size: "311 .cs (~22 тыс. строк), 50 сцен, 483 префаба, 656 .asset"
+
+  - name: excalibur
+    source: git
+    url: https://github.com/excaliburjs/Excalibur.git
+    commit: 760a28a8544d477a496cbb72a14ac68ff9583354   # 2026-09-20, ветка main
+    root: .
+    languages: [ts]
+    license: BSD-2-Clause
+    clone: sparse                 # --depth 1, из checkout исключена папка site/ (сайт документации, ~400 МБ)
+    size: "src/engine: 294 .ts (~60 тыс. строк); src/spec: 160 .ts (~45 тыс. строк)"
+
+  - name: nano
+    source: git
+    url: https://github.com/lonng/nano.git
+    commit: dbf22c701d271c5dcdb647df375320a9986b83d5   # 2026-02-26, ветка master
+    root: .
+    languages: [go]
+    license: MIT
+    clone: full                   # --depth 1
+    size: "77 .go (~9,6 тыс. строк, из них ~2 тыс. — сгенерированный protobuf)"
+
+  - name: ggez
+    source: git
+    url: https://github.com/ggez/ggez.git
+    commit: 9c865474504084b60204874bc028ba91c5f013b9   # 2026-08-24, ветка master
+    root: .
+    languages: [rust]
+    license: MIT
+    clone: full                   # --depth 1
+    size: "73 .rs (~21 тыс. строк: src ~15 тыс., examples ~6 тыс.)"
+
+# Шаблон для синтетических баз (F02-03) и проектов пользователя:
+#  - name: synth-unity-basic
+#    source: synthetic            # или git / local
+#    path: Bench/synthetic/unity-basic   # для synthetic/local вместо url
+#    languages: [csharp, unity-yaml]

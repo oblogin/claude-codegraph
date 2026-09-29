@@ -1,0 +1,209 @@
+schema: 1
+id: excalibur-04-loadable-load-rename-impact
+project: excalibur
+commit: 760a28a8544d477a496cbb72a14ac68ff9583354
+languages: [ts]
+kind: impact
+trap: true
+change: rename
+question: >
+  Хочу переименовать метод load() интерфейса Loadable (например, в loadAsync). Какие файлы движка и какие тесты
+  придётся менять?
+target:
+  file: src/engine/interfaces/loadable.ts
+  symbol: Loadable.load
+  line: 14
+direction: incoming
+match: file
+scope: [src/engine/, src/spec/]
+edges:
+  # --- реализации интерфейса (TS не заставит их переименоваться автоматически, но implements сломается) ---
+  - rel: override
+    expect: must
+    from: {file: src/engine/director/default-loader.ts, line: 209, symbol: DefaultLoader.load}
+    confidence: high
+    how: "class DefaultLoader implements Loadable<Loadable<any>[]> (стр. 47). В том же файле вызов через интерфейс r.load() (стр. 230)."
+  - rel: override
+    expect: must
+    from: {file: src/engine/graphics/image-source.ts, line: 240, symbol: ImageSource.load}
+    confidence: high
+    how: "implements Loadable<HTMLImageElement> (стр. 30); внутри вызов Resource.load (стр. 250)."
+  - rel: override
+    expect: must
+    from: {file: src/engine/resources/font.ts, line: 36, symbol: FontSource.load}
+    confidence: high
+    how: "implements Loadable<FontFace> (стр. 14); внутри Resource.load (стр. 42). Стр. 50 this.data.load() — это DOM FontFace.load, его НЕ менять."
+  - rel: override
+    expect: must
+    from: {file: src/engine/resources/gif.ts, line: 59, symbol: Gif.load}
+    confidence: high
+    how: "implements Loadable<ImageSource[]> (стр. 12); внутри Resource.load (стр. 60) и ImageSource.load (стр. 65)."
+  - rel: override
+    expect: must
+    from: {file: src/engine/resources/resource.ts, line: 75, symbol: Resource.load}
+    confidence: high
+    how: "implements Loadable<T> (стр. 39)."
+  - rel: override
+    expect: must
+    from: {file: src/engine/resources/sound/sound.ts, line: 266, symbol: Sound.load}
+    confidence: high
+    how: "implements Audio, Loadable<AudioBuffer> (стр. 105); внутри Resource.load (стр. 270)."
+  # --- прямые вызовы реализаций в движке ---
+  - rel: call
+    expect: must
+    from: {file: src/engine/graphics/context/debug-text.ts, line: 42, symbol: DebugText.load}
+    confidence: high
+    how: "this._imageSource.load() — ImageSource.load. Сам DebugText.load (стр. 40) и this.load() (стр. 20) — НЕ Loadable, не менять."
+  - rel: call
+    expect: must
+    from: {file: src/engine/graphics/sprite-sheet.ts, line: 221, symbol: SpriteSheet.getSpriteAsStandalone}
+    confidence: high
+    how: "imgSrc.load(), imgSrc: ImageSource."
+  - rel: call
+    expect: must
+    from: {file: src/engine/engine.ts, line: 2115, symbol: Engine.load}
+    confidence: high
+    how: "loader.load(), loader: DefaultLoader."
+  - rel: inherit
+    expect: may
+    from: {file: src/engine/director/loader.ts, line: 93, symbol: Loader}
+    confidence: high
+    how: "Loader extends DefaultLoader, свой load() не определяет — файл менять не нужно, но поведение затронуто."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/actor-spec.ts, line: 820}
+    confidence: high
+    how: "Вызовы .load() (2 шт.) на объектах (image,texture), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/default-loader-spec.ts, line: 71}
+    confidence: high
+    how: "Вызовы .load() (1 шт.) на объектах (sut), созданных как new ex.DefaultLoader."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/engine-spec.ts, line: 835}
+    confidence: high
+    how: "Вызовы .load() (5 шт.) на объектах (backgroundImage,img,playerImage), созданных как new ex.ImageSource. Плюс class FailedLoader extends ex.DefaultLoader с переопределением async load() (стр. 96)."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/excalibur-graphics-context-spec.ts, line: 552}
+    confidence: high
+    how: "Вызовы .load() (7 шт.) на объектах (image,tex), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/font-source-spec.ts, line: 16}
+    confidence: high
+    how: "Вызовы .load() (8 шт.) на объектах (fontSource), созданных как new ex.FontSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/gif-spec.ts, line: 27}
+    confidence: high
+    how: "Вызовы .load() (7 шт.) на объектах (gif,sut), созданных как new ex.Gif."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/graphics-system-spec.ts, line: 165}
+    confidence: high
+    how: "Вызовы .load() (4 шт.) на объектах (sword), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/image-source-spec.ts, line: 43}
+    confidence: high
+    how: "Вызовы .load() (20 шт.) на объектах (base64Image,spriteFontImage,sut,svgImage), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/isometric-map-spec.ts, line: 28}
+    confidence: high
+    how: "Вызовы .load() (5 шт.) на объектах (image), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/label-spec.ts, line: 61}
+    confidence: high
+    how: "Вызовы .load() (1 шт.) на объектах (spriteFontImage), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/material-pipeline-spec.ts, line: 100}
+    confidence: high
+    how: "Вызовы .load() (10 шт.) на объектах (overlay,tex), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/material-renderer-spec.ts, line: 176}
+    confidence: high
+    how: "Вызовы .load() (5 шт.) на объектах (stars,tex), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/nine-slice-spec.ts, line: 17}
+    confidence: high
+    how: "Вызовы .load() (1 шт.) на объектах (inputTile), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/resource-spec.ts, line: 24}
+    confidence: high
+    how: "Вызовы .load() (4 шт.) на объектах (badResource,resource,text), созданных как new ex.Resource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/shader-effects-spec.ts, line: 358}
+    confidence: high
+    how: "Вызовы .load() (2 шт.) на объектах (tex), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/sound-spec.ts, line: 57}
+    confidence: high
+    how: "Вызовы .load() (31 шт.) на объектах (sut), созданных как new ex.Sound."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/sprite-sheet-spec.ts, line: 20}
+    confidence: high
+    how: "Вызовы .load() (10 шт.) на объектах (image), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/sprite-spec.ts, line: 129}
+    confidence: high
+    how: "Вызовы .load() (8 шт.) на объектах (image), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/text-spec.ts, line: 551}
+    confidence: high
+    how: "Вызовы .load() (10 шт.) на объектах (spriteFontImage), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/tile-map-spec.ts, line: 28}
+    confidence: high
+    how: "Вызовы .load() (5 шт.) на объектах (image,texture), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/tiled-animation-spec.ts, line: 27}
+    confidence: high
+    how: "Вызовы .load() (1 шт.) на объектах (cardsImage), созданных как new ex.ImageSource."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/tiled-sprite-spec.ts, line: 28}
+    confidence: high
+    how: "Вызовы .load() (4 шт.) на объектах (cardsImage,image), созданных как new ex.ImageSource."
+  # --- ловушки: другие load() ---
+  - rel: test
+    expect: must_not
+    from: {file: src/spec/vitest/debug-text-spec.ts}
+    confidence: high
+    how: "debugText.load() — new ex.DebugText(): DebugText не реализует Loadable."
+  - rel: test
+    expect: must_not
+    from: {file: src/spec/vitest/debug-system-spec.ts, line: 45}
+    confidence: high
+    how: "(engine.graphicsContext.debug as any)._debugText.load() — поле _debugText = new DebugText() в графических контекстах."
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/director/director.ts, line: 533}
+    confidence: high
+    how: "this._engine.load(loader, …) — Engine.load(loader), другой метод (Engine не Loadable)."
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/graphics/context/image-renderer/image-renderer.ts, line: 138}
+    confidence: high
+    how: "textureLoader.load(...) — TextureLoader.load; так же image-renderer-v2.ts, material-renderer.ts, particle-renderer.ts, shader-pass.ts, shader.ts, font-text-instance.ts."
+notes: >
+  match: file — считаем затронутые файлы, а не строки (в тестах ~170 вызовов). Сам файл интерфейса
+  (interfaces/loadable.ts) — это target, в список не входит. Правильный ответ: 9 файлов движка + 22 файла тестов.
+  Главная сложность — тип получателя .load(): в тех же тестах и в движке есть DebugText.load, Engine.load,
+  TextureLoader.load и DOM FontFace.load, которые переименовывать нельзя. Реализации Loadable в TS структурные:
+  класс без «implements Loadable», но с методом load() тоже подошёл бы — таких в src/engine и src/spec нет
+  (проверено поиском классов с методом load()).

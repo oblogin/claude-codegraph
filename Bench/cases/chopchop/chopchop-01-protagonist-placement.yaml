@@ -1,0 +1,108 @@
+schema: 1
+id: chopchop-01-protagonist-placement
+project: chopchop
+commit: 608eac98df29cd97821a6115cd52dfb9027345b1
+languages: [csharp, unity-yaml]
+kind: unity_placement
+trap: true
+question: >
+  На каких объектах в сценах и префабах висит компонент Protagonist
+  (с учётом вложенных префабов и удалённых в экземпляре компонентов)?
+target:
+  file: UOP1_Project/Assets/Scripts/Characters/Protagonist.cs
+  symbol: Protagonist
+  line: 7
+direction: incoming
+match: file
+scope: [UOP1_Project/Assets/]
+edges:
+  # --- прямо в файле (m_Script guid 45f6466be0a32e746abeb31b2a794001) ---
+  - rel: script_on_object
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/PigChef.prefab, line: 340, fileID: "5557640735889932260", object: PigChef}
+    confidence: high
+    how: "Документ !u!114 &5557640735889932260 (стр. 331), m_Script guid = Protagonist.cs.meta. GameObject — stripped-заглушка из вложенного префаба модели (c478a391…), компонент добавлен поверх."
+  - rel: script_on_object
+    expect: must
+    from: {file: "UOP1_Project/Assets/Scenes/Whiteboxing/Community/Beach/Proposal_1/BeachWhiteboxing_1_optimized.unity", line: 26920, fileID: "211818859017744399", object: BardHare}
+    confidence: high
+    how: "m_Script guid = Protagonist.cs.meta, m_Enabled: 0 (компонент выключен, но висит). Объект BardHare — старый набросок сцены."
+  - rel: script_on_object
+    expect: must
+    from: {file: "UOP1_Project/Assets/Scenes/Whiteboxing/Community/GeneralMap/GeneralMap_Proposal 1.unity", line: 301277, fileID: "211818859017744399", object: BardHare}
+    confidence: high
+    how: "То же, что в BeachWhiteboxing_1_optimized.unity: копия объекта BardHare, m_Enabled: 0."
+  # --- через вложенный префаб ---
+  - rel: script_via_prefab
+    expect: must
+    from: {file: UOP1_Project/Assets/Scenes/WIP/ArtShowcase.unity, line: 3218}
+    via: [UOP1_Project/Assets/Prefabs/Characters/PigChef.prefab]
+    confidence: high
+    how: "PrefabInstance &409622576 (стр. 1819–3218): m_SourcePrefab = PigChef.prefab (guid 062b3805…), m_RemovedComponents: [] — Protagonist остаётся. GUID скрипта в файле сцены не встречается."
+  # --- ловушки: PigChef вложен, но Protagonist в экземпляре удалён ---
+  - rel: script_via_prefab
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Prefabs/Cutscenes/BeachCandyCutscene.prefab, line: 1472}
+    via: [UOP1_Project/Assets/Prefabs/Characters/PigChef.prefab]
+    confidence: high
+    how: "Оба экземпляра PigChef (стр. 1466–1472 и 1598–1604) перечисляют в m_RemovedComponents {fileID: 5557640735889932260, guid: 062b…} — это Protagonist. В катсцене персонаж — «кукла» без управления."
+  - rel: script_via_prefab
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Prefabs/Cutscenes/BeachGameEndCutscene.prefab, line: 869}
+    via: [UOP1_Project/Assets/Prefabs/Characters/PigChef.prefab]
+    confidence: high
+    how: "m_RemovedComponents (стр. 864–868) содержит 5557640735889932260."
+  - rel: script_via_prefab
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Prefabs/Cutscenes/BeachIntroCutscene.prefab, line: 607}
+    via: [UOP1_Project/Assets/Prefabs/Characters/PigChef.prefab]
+    confidence: high
+    how: "m_RemovedComponents (стр. 602–606) содержит 5557640735889932260."
+  - rel: script_via_prefab
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Prefabs/Cutscenes/SlimeCritterCutscene.prefab, line: 1148}
+    via: [UOP1_Project/Assets/Prefabs/Characters/PigChef.prefab]
+    confidence: high
+    how: "m_RemovedComponents (стр. 1143–1147) содержит 5557640735889932260."
+  - rel: script_via_prefab
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Prefabs/Cutscenes/SweetDishCutscene.prefab, line: 4205}
+    via: [UOP1_Project/Assets/Prefabs/Characters/PigChef.prefab]
+    confidence: high
+    how: "m_RemovedComponents (стр. 4200–4204) содержит 5557640735889932260."
+  # сцены, куда вставлены эти катсцены: Protagonist туда тоже не попадает
+  - rel: script_via_prefab
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scenes/Locations/Beach.unity}
+    via: [UOP1_Project/Assets/Prefabs/Characters/PigChef.prefab, UOP1_Project/Assets/Prefabs/Cutscenes/BeachCandyCutscene.prefab]
+    confidence: high
+    how: "Beach.unity содержит BeachCandyCutscene (стр. 62690) и BeachIntroCutscene (стр. 55971); PigChef в них без Protagonist, своего PigChef в сцене нет (guid 062b… в файле не встречается)."
+  - rel: script_via_prefab
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scenes/Locations/Beach_Night.unity}
+    via: [UOP1_Project/Assets/Prefabs/Cutscenes/BeachGameEndCutscene.prefab]
+    confidence: high
+    how: "Только через BeachGameEndCutscene (стр. 19514)."
+  - rel: script_via_prefab
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scenes/Locations/Field_Farms.unity}
+    via: [UOP1_Project/Assets/Prefabs/Cutscenes/SlimeCritterCutscene.prefab]
+    confidence: high
+    how: "Только через SlimeCritterCutscene (стр. 573503)."
+  - rel: script_via_prefab
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scenes/Locations/Town_Upper.unity}
+    via: [UOP1_Project/Assets/Prefabs/Cutscenes/SweetDishCutscene.prefab]
+    confidence: high
+    how: "Только через SweetDishCutscene (стр. 9592)."
+  # --- связанное, но не «висит» ---
+  - rel: asset_ref
+    expect: may
+    from: {file: UOP1_Project/Assets/Prefabs/Gameplay/SpawnSystem.prefab, line: 48}
+    confidence: high
+    how: "Поле SpawnSystem._playerPrefab (тип Protagonist) ссылается на компонент 5557640735889932260 в PigChef.prefab; игрок создаётся в рантайме (SpawnSystem.cs, Instantiate). Это ссылка, а не размещение; SpawnSystem.prefab вставлен в ~30 сцен."
+notes: >
+  Главная ловушка — m_RemovedComponents: наивный обход «префаб вложен → все его скрипты есть» даёт
+  5 катсцен и 4 сцены локаций, где Protagonist на самом деле удалён. Второй источник ошибки — grep по guid
+  скрипта: он находит 3 прямых файла и пропускает ArtShowcase.unity (там только PrefabInstance).
+  Игрок в игровых сценах появляется в рантайме через SpawnSystem, поэтому сцены локаций не содержат Protagonist статически.

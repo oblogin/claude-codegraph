@@ -1,0 +1,67 @@
+schema: 1
+id: ggez-06-request-quit-callers
+project: ggez
+commit: 9c865474504084b60204874bc028ba91c5f013b9
+languages: [rust]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Context::request_quit? Документация EventHandler::key_down_event утверждает, что реализация
+  по умолчанию его вызывает при нажатии Escape, — так ли это?
+target:
+  file: src/context.rs
+  symbol: Context::request_quit
+  line: 79
+direction: incoming
+match: line
+edges:
+  - rel: call
+    expect: must
+    from: {file: examples/05_astroblasto.rs, line: 491, symbol: "<MainState as EventHandler>::update"}
+    confidence: high
+    how: "ctx.request_quit() при гибели игрока; ctx: &mut Context."
+  - rel: call
+    expect: must
+    from: {file: examples/05_astroblasto.rs, line: 578, symbol: "<MainState as EventHandler>::key_down_event"}
+    confidence: high
+    how: "Key::Named(NamedKey::Escape) => ctx.request_quit()."
+  - rel: call
+    expect: must
+    from: {file: examples/eventloop.rs, line: 55, symbol: "<CustomApplicationHandler as ApplicationHandler>::window_event"}
+    confidence: high
+    how: "self.ctx.request_quit() — поле ctx: Context в собственном цикле событий (стр. 24)."
+  - rel: call
+    expect: must
+    from: {file: examples/eventloop.rs, line: 60, symbol: "<CustomApplicationHandler as ApplicationHandler>::window_event"}
+    confidence: high
+    how: "self.ctx.request_quit() во второй ветке match."
+  - rel: call
+    expect: must
+    from: {file: examples/logging.rs, line: 109, symbol: "<App as EventHandler>::key_down_event"}
+    confidence: high
+    how: "ctx.request_quit()."
+  - rel: call
+    expect: must
+    from: {file: examples/sounds.rs, line: 99, symbol: "<MainState as EventHandler>::key_down_event"}
+    confidence: high
+    how: "PhysicalKey::Code(KeyCode::Escape) => ctx.request_quit()."
+  - rel: test
+    expect: may
+    from: {file: src/input/keyboard.rs, line: 83}
+    confidence: high
+    how: "Пример в документации модуля (//! ```rust,no_run, стр. 27–104): ctx.request_quit() внутри key_down_event. no_run — компилируется как doc-тест, но не запускается; переименование метода сломает `cargo test --doc`."
+  # --- ловушки ---
+  - rel: call
+    expect: must_not
+    from: {file: src/event.rs, line: 165, symbol: EventHandler::key_down_event}
+    confidence: high
+    how: "Реализация по умолчанию НЕ вызывает request_quit: пишет напрямую HasMut::<ContextFields>::retrieve_mut(ctx).quit_requested = true (C — дженерик контекста, у него нет метода request_quit). Док-комментарий на стр. 160 («will call ctx.request_quit()») расходится с кодом."
+  - rel: reference
+    expect: must_not
+    from: {file: src/event.rs, line: 160}
+    confidence: high
+    how: "Ссылка в док-комментарии [`ctx.request_quit()`](crate::Context::request_quit) — не вызов. То же context.rs:93, 96."
+notes: >
+  Ловушка «документация врёт»: агент, который доверяет комментарию, решит, что переименование request_quit
+  затронет обработку Escape по умолчанию, — это не так (там прямое присваивание полю). Правильный ответ —
+  6 вызовов в 4 примерах и один doc-тест (may, поскольку это пример в комментарии).

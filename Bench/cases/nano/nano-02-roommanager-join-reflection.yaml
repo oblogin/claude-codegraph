@@ -1,0 +1,59 @@
+schema: 1
+id: nano-02-roommanager-join-reflection
+project: nano
+commit: dbf22c701d271c5dcdb647df375320a9986b83d5
+languages: [go, js]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает обработчик (*RoomManager).Join в демо-чате? В Go-коде прямых вызовов нет. Что сломается,
+  если метод переименовать?
+target:
+  file: examples/demo/chat/main.go
+  symbol: main.(*RoomManager).Join
+  line: 106
+direction: incoming
+match: line
+edges:
+  - rel: reflection
+    expect: must
+    from: {file: examples/demo/chat/main.go, line: 138, symbol: main.main}
+    confidence: high
+    how: "components.Register(NewRoomManager(), component.WithName(\"room\"), component.WithNameFunc(strings.ToLower)) — компонент регистрируется целиком; методы-обработчики потом извлекаются через reflect (component/service.go ExtractHandler). Имя обработчика: strings.ToLower(\"Join\") = \"join\", маршрут — \"room.join\" (cluster/handler.go:136)."
+  - rel: string_ref
+    expect: must
+    from: {file: examples/demo/chat/web/index.html, line: 65}
+    confidence: high
+    how: "Клиент на JS: starx.request(\"room.join\", {}, join). Переименование Join → маршрут \"room.<новое имя>\", клиент перестанет попадать в обработчик без ошибки компиляции."
+  # --- механизм фреймворка (общий для всех обработчиков) ---
+  - rel: reflection
+    expect: may
+    from: {file: component/service.go, line: 86, symbol: component.(*Service).suitableHandlerMethods}
+    confidence: high
+    how: "methods[mn] = &Handler{Method: method, …} — сюда попадает Join (сигнатура (*session.Session, []byte) error проходит isHandlerMethod, method.go:52)."
+  - rel: reflection
+    expect: may
+    from: {file: cluster/handler.go, line: 475, symbol: cluster.(*LocalHandler).localProcess}
+    confidence: high
+    how: "handler.Method.Func.Call(args) — фактический вызов любого обработчика по маршруту из сообщения клиента."
+  # --- ловушки ---
+  - rel: string_ref
+    expect: must_not
+    from: {file: examples/demo/chat/web/index.html, line: 33}
+    confidence: high
+    how: "starx.notify('room.message', …) — маршрут другого обработчика, (*RoomManager).Message."
+  - rel: call
+    expect: must_not
+    from: {file: examples/cluster/master/topic_service.go, line: 49, symbol: master.(*TopicService).NewUser}
+    confidence: high
+    how: "strings.Join(members, \",\") — совпадение по имени. То же filepath.Join в examples/cluster/main.go:94 и examples/customerroute/main.go:94."
+  - rel: reference
+    expect: must_not
+    from: {file: examples/cluster/chat/chat_service.go, line: 25, symbol: chat.(*RoomService).JoinRoom}
+    confidence: high
+    how: "Другой обработчик в другом примере (маршрут RoomService.JoinRoom), совпадение по подстроке Join."
+notes: >
+  Непрямой вызов через reflection и строковый маршрут из JS-клиента: граф одного языка связь не найдёт.
+  Нужны два шага: (1) понять, что Register + ExtractHandler делают все экспортированные методы подходящей
+  сигнатуры обработчиками, и применить опции WithName/WithNameFunc к имени; (2) сопоставить строку "room.join"
+  в index.html с маршрутом. Файлы starx-wsclient.js/protocol.js — библиотека клиента, в эталон не входят.

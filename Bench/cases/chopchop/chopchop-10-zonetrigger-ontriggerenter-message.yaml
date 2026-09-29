@@ -1,0 +1,53 @@
+schema: 1
+id: chopchop-10-zonetrigger-ontriggerenter-message
+project: chopchop
+commit: 608eac98df29cd97821a6115cd52dfb9027345b1
+languages: [csharp, unity-yaml]
+kind: engine_message
+trap: true
+question: >
+  Кто вызывает ZoneTriggerController.OnTriggerEnter? Это мёртвый код (в C# вызовов нет)?
+target:
+  file: UOP1_Project/Assets/Scripts/Characters/ZoneTriggerController.cs
+  symbol: ZoneTriggerController.OnTriggerEnter
+  line: 16
+direction: incoming
+match: line
+scope: [UOP1_Project/Assets/]
+edges:
+  - rel: engine_message
+    expect: must
+    from: {external: "unity:message:OnTriggerEnter"}
+    confidence: high
+    how: "ZoneTriggerController : MonoBehaviour (стр. 11); private void OnTriggerEnter(Collider) — сообщение физики Unity, вызывается движком по имени, когда коллайдер-триггер на том же объекте пересекается с другим. Код не мёртвый."
+  # где движок будет вызывать метод — объекты с этим компонентом (и коллайдером-триггером)
+  - rel: script_on_object
+    expect: may
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/Critters/TriggerZone.prefab, line: 57, fileID: "96998187169542721", object: AlertZone}
+    confidence: high
+    how: "Компонент висит на объекте со SphereCollider (m_IsTrigger: 1, стр. 43) — зона обнаружения врага."
+  - rel: script_on_object
+    expect: may
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/PigChef.prefab, line: 745, fileID: "8408749132940338571", object: InteractionDetector}
+    confidence: high
+    how: "Детектор интерактивных объектов игрока."
+  # --- ловушки: одноимённые сообщения в других классах ---
+  - rel: engine_message
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/Characters/Attack.cs, line: 14, symbol: Attack.OnTriggerEnter}
+    confidence: high
+    how: "Другой класс с тем же сообщением; это не вызов target."
+  - rel: engine_message
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/SceneManagement/LocationExit.cs, line: 15, symbol: LocationExit.OnTriggerEnter}
+    confidence: high
+    how: "То же; ещё 7 таких определений: AudioCueOnTriggerEnter.cs:15, CutsceneTrigger.cs:58, DialogueTrigger.cs:8, FallCatcher.cs:8 и три в Scenes/Whiteboxing."
+  - rel: reference
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/Audio/AudioCueOnTriggerEnter.cs, line: 11, symbol: Assets.Scripts.Audio.AudioCueOnTriggerEnter}
+    confidence: high
+    how: "Имя класса содержит «OnTriggerEnter» — совпадение для grep."
+notes: >
+  Проверяет знание сообщений движка: инструмент должен показать, что метод вызывает Unity (а не «0 вызовов»),
+  и не должен выдавать одноимённые методы других классов. Места, где висит компонент, — may: они отвечают на вопрос
+  «где сработает», но не являются вызовом. Транзитивные размещения (враги, катсцены, сцены) — см. chopchop-09.

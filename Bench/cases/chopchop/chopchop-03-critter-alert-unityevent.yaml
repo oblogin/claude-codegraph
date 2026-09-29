@@ -1,0 +1,81 @@
+schema: 1
+id: chopchop-03-critter-alert-unityevent
+project: chopchop
+commit: 608eac98df29cd97821a6115cd52dfb9027345b1
+languages: [csharp, unity-yaml]
+kind: unity_event
+trap: true
+question: >
+  Кто вызывает Critter.OnAlertTriggerChange? В C# вызовов нет — метод вызывается из UnityEvent.
+  Где именно настроены эти вызовы?
+target:
+  file: UOP1_Project/Assets/Scripts/Characters/Critter.cs
+  symbol: Critter.OnAlertTriggerChange
+  line: 10
+direction: incoming
+match: line
+line_tolerance: 5
+scope: [UOP1_Project/Assets/]
+edges:
+  # UnityEvent задан не в теле компонента, а переопределением во вложенном экземпляре TriggerZone.prefab
+  - rel: unity_event
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/NPCs_BasePrefabs/Gluecose.prefab, line: 396, object: "TriggerZone_Alert (экземпляр TriggerZone.prefab)"}
+    confidence: high
+    how: "PrefabInstance (TriggerZone_Alert, m_SourcePrefab = TriggerZone.prefab, guid c823b09b…, стр. 460): m_Modifications на ZoneTriggerController (target fileID 96998187169542721) — propertyPath _enterZone.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName = OnAlertTriggerChange (стр. 396), m_Target → {fileID: -2448911175244354893} (стр. 393) = компонент Critter этого префаба (m_Script d83d74df…, стр. 136)."
+  - rel: unity_event
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/NPCs_BasePrefabs/Groen.prefab, line: 338, object: "TriggerZone_Alert (экземпляр TriggerZone.prefab)"}
+    confidence: high
+    how: "То же устройство: m_MethodName = OnAlertTriggerChange (стр. 338), m_Target → {fileID: 443910769} (стр. 335) = Critter (стр. 135)."
+  - rel: unity_event
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/NPCs_BasePrefabs/Klipper.prefab, line: 434, object: "TriggerZone_Alert (экземпляр TriggerZone.prefab)"}
+    confidence: high
+    how: "m_MethodName = OnAlertTriggerChange (стр. 434), m_Target → {fileID: 1419279371} (стр. 431) = Critter (стр. 162); здесь же задан m_TargetAssemblyTypeName: Critter, Assembly-CSharp (стр. 439)."
+  # --- ловушки ---
+  - rel: unity_event
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/NPCs_BasePrefabs/Gluecose.prefab, line: 243}
+    confidence: high
+    how: "Соседний экземпляр TriggerZone_Attack того же префаба вызывает другой метод — OnAttackTriggerChange."
+  - rel: unity_event
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/NPCs_BasePrefabs/Groen.prefab, line: 259}
+    confidence: high
+    how: "OnAttackTriggerChange, не OnAlertTriggerChange."
+  - rel: unity_event
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/NPCs_BasePrefabs/Klipper.prefab, line: 365}
+    confidence: high
+    how: "OnAttackTriggerChange, не OnAlertTriggerChange."
+  - rel: unity_event
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/Critters/TriggerZone.prefab, line: 64}
+    confidence: high
+    how: "Базовый префаб зоны: m_Target {fileID: 0}, m_MethodName set_isPlayerInAlertZone — «мёртвый» вызов сеттера свойства, которого нет (в Critter isPlayerInAlertZone — поле). К target не относится; в экземплярах перезаписан."
+  # --- транзитивно: экземпляры и варианты базовых префабов (вызов наследуется) ---
+  - rel: unity_event
+    expect: may
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/NPCs_Unique/Gluecose_FarmAttack.prefab}
+    via: [UOP1_Project/Assets/Prefabs/Characters/NPCs_BasePrefabs/Gluecose.prefab]
+    confidence: high
+    how: "Вариант Gluecose; своих переопределений _enterZone нет, вызов наследуется."
+  - rel: unity_event
+    expect: may
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/NPCs_Unique/PlantCritter.prefab}
+    via: [UOP1_Project/Assets/Prefabs/Characters/NPCs_BasePrefabs/Groen.prefab]
+    confidence: high
+    how: "Вариант Groen."
+  - rel: unity_event
+    expect: may
+    from: {file: UOP1_Project/Assets/Prefabs/Characters/NPCs_Unique/Klipper_TerraRequest.prefab}
+    via: [UOP1_Project/Assets/Prefabs/Characters/NPCs_BasePrefabs/Klipper.prefab]
+    confidence: high
+    how: "Вариант Klipper."
+notes: >
+  Самая «невидимая» связь в наборе: вызов задан тремя строками m_Modifications (m_Target, m_MethodName и иногда
+  m_TargetAssemblyTypeName) у вложенного экземпляра TriggerZone.prefab. В C# у метода ноль вызовов,
+  в базовом TriggerZone.prefab вызов пустой. Правильный ответ — 3 строки в 3 базовых префабах врагов.
+  Транзитивные экземпляры (варианты, сцены с этими врагами) — may: файлы не содержат настройки вызова.
+  match: line с допуском 5 — чтобы засчитать ответ, указывающий на строку m_Target или начало модификации.

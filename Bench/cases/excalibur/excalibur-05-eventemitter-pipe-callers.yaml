@@ -1,0 +1,87 @@
+schema: 1
+id: excalibur-05-eventemitter-pipe-callers
+project: excalibur
+commit: 760a28a8544d477a496cbb72a14ac68ff9583354
+languages: [ts]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает EventEmitter.pipe (пересылка событий одного эмиттера в другой), включая тесты?
+target:
+  file: src/engine/event-emitter.ts
+  symbol: EventEmitter.pipe
+  line: 104
+direction: incoming
+match: line
+line_tolerance: 1
+scope: [src/engine/, src/spec/]
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/engine/collision/collider-component.ts, line: 112, symbol: ColliderComponent.use}
+    confidence: high
+    how: "collider.events.pipe(this.events) — события коллайдера пересылаются в эмиттер компонента (на этом держится excalibur-02)."
+  - rel: call
+    expect: must
+    from: {file: src/engine/collision/colliders/composite-collider.ts, line: 72, symbol: CompositeCollider.addCollider}
+    confidence: high
+    how: "c.events.pipe(this.events); c: Collider, events: EventEmitter (collider.ts:31)."
+  - rel: call
+    expect: must
+    from: {file: src/engine/engine.ts, line: 1249, symbol: Engine.constructor}
+    confidence: high
+    how: "this.director.events.pipe(this.events); Director.events: EventEmitter<DirectorEvents> (director.ts:103)."
+  - rel: call
+    expect: must
+    from: {file: src/engine/input/gamepad.ts, line: 168, symbol: Gamepads.update}
+    confidence: high
+    how: "gamepad.events.pipe(this.events); Gamepad.events: EventEmitter<GamepadEvents> (стр. 302)."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/event-emitter-spec.ts, line: 131}
+    confidence: high
+    how: "const pipeSub = actorEmitter.pipe(sceneEmitter) — тест «can pipe events into other emitters»."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/event-emitter-spec.ts, line: 146}
+    confidence: high
+    how: "newPubSub.pipe(pubSub) — тест «can unpipe from other emitters»."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/event-emitter-spec.ts, line: 166}
+    confidence: high
+    how: "const sub = newPubSub.pipe(pubSub) — «can unpipe … via subscription.close()»."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/event-emitter-spec.ts, line: 187}
+    confidence: high
+    how: "pubSub.pipe(pubSub) — «cannot pipe to self»."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/event-emitter-spec.ts, line: 253}
+    confidence: high
+    how: "newPubSub.pipe(pubSub) — «preserves falsy event value»."
+  # --- ловушки: unpipe содержит подстроку «pipe(» ---
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/collision/collider-component.ts, line: 158, symbol: ColliderComponent.processColliderRemoval}
+    confidence: high
+    how: "collider.events.unpipe(this.events) — другой метод EventEmitter.unpipe (event-emitter.ts:124)."
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/collision/colliders/composite-collider.ts, line: 81}
+    confidence: high
+    how: "collider.events.unpipe(this.events)."
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/input/gamepad.ts, line: 160, symbol: Gamepads.update}
+    confidence: high
+    how: "gamepad.events.unpipe(this.events)."
+  - rel: test
+    expect: must_not
+    from: {file: src/spec/vitest/event-emitter-spec.ts, line: 157}
+    confidence: high
+    how: "newPubSub.unpipe(pubSub)."
+notes: >
+  Базовый случай «прямые вызовы метода класса», с тестами. Ловушка мелкая: grep «pipe(» захватывает unpipe(
+  в тех же функциях (поэтому match: line с допуском 1). Других методов pipe в src нет.

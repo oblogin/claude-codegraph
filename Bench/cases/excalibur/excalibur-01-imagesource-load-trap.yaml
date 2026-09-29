@@ -1,0 +1,79 @@
+schema: 1
+id: excalibur-01-imagesource-load-trap
+project: excalibur
+commit: 760a28a8544d477a496cbb72a14ac68ff9583354
+languages: [ts]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает ImageSource.load() в движке (src/engine)? В проекте больше десятка методов load() у разных классов.
+target:
+  file: src/engine/graphics/image-source.ts
+  symbol: ImageSource.load
+  line: 240
+direction: incoming
+match: line
+scope: [src/engine/]
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/engine/graphics/context/debug-text.ts, line: 42, symbol: DebugText.load}
+    confidence: high
+    how: "this._imageSource.load(); поле _imageSource: ImageSource (стр. 37), создаётся new ImageSource(...) на стр. 41."
+  - rel: call
+    expect: must
+    from: {file: src/engine/graphics/sprite-sheet.ts, line: 221, symbol: SpriteSheet.getSpriteAsStandalone}
+    confidence: high
+    how: "const imgSrc = new ImageSource(cnv.toDataURL()); await imgSrc.load();"
+  - rel: call
+    expect: must
+    from: {file: src/engine/resources/gif.ts, line: 65, symbol: Gif.load}
+    confidence: high
+    how: "images = this._gif.images.map(i => new ImageSource(...)); Promise.all(images.map((t) => t.load())) — t: ImageSource."
+  - rel: call_interface
+    expect: must
+    from: {file: src/engine/director/default-loader.ts, line: 230, symbol: DefaultLoader.load}
+    confidence: high
+    how: "r.load() по элементам _resources: Loadable<any>[]. ImageSource implements Loadable (image-source.ts:30) и добавляется в Loader через addResource — основной путь загрузки картинок в играх."
+  # --- ловушки: другие load() ---
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/graphics/context/debug-text.ts, line: 20, symbol: DebugText.constructor}
+    confidence: high
+    how: "this.load() — DebugText.load (стр. 40), а не ImageSource.load (он вызывается внутри уже на стр. 42)."
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/graphics/image-source.ts, line: 250, symbol: ImageSource.load}
+    confidence: high
+    how: "this._resource.load() — Resource<Blob>.load (resource.ts:75), вызов ИЗ target, не В target."
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/resources/font.ts, line: 42, symbol: FontSource.load}
+    confidence: high
+    how: "this._resource.load() — Resource.load. То же gif.ts:60 и sound.ts:270."
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/resources/font.ts, line: 50, symbol: FontSource.load}
+    confidence: high
+    how: "this.data.load() — data: FontFace (DOM API FontFace.load), не ImageSource."
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/engine.ts, line: 2115, symbol: Engine.load}
+    confidence: high
+    how: "loader.load() — параметр loader: DefaultLoader, т. е. DefaultLoader.load; до ImageSource.load доходит только транзитивно (через default-loader.ts:230)."
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/graphics/context/image-renderer/image-renderer.ts, line: 138}
+    confidence: high
+    how: "this._context.textureLoader.load(...) — TextureLoader.load. Аналогично image-renderer-v2.ts:227, material-renderer.ts:304, particle-renderer.ts:49, shader-pass.ts:249, shader.ts:527, font-text-instance.ts:304."
+  - rel: string_ref
+    expect: must_not
+    from: {file: src/engine/graphics/sprite.ts, line: 112}
+    confidence: high
+    how: "Текст предупреждения «Please call .load() or include in a Loader» — строка, не вызов. То же nine-slice.ts:372."
+notes: >
+  Ловушка «одноимённые методы»: grep «\.load(» по src/engine даёт ~20 строк, из них 4 — вызовы ImageSource.load.
+  Для разрешения нужен вывод типа получателя (поле, локальная переменная, параметр лямбды из map по массиву ImageSource[]).
+  Вызов через интерфейс Loadable в DefaultLoader.load засчитан как must: ImageSource — один из шести классов,
+  реализующих Loadable, и именно так картинки загружаются в играх. Тесты (src/spec) в scope не входят,
+  см. excalibur-04.

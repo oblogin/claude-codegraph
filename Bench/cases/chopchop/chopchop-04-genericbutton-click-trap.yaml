@@ -1,0 +1,52 @@
+schema: 1
+id: chopchop-04-genericbutton-click-trap
+project: chopchop
+commit: 608eac98df29cd97821a6115cd52dfb9027345b1
+languages: [csharp, unity-yaml]
+kind: unity_event
+trap: true
+question: >
+  Кто вызывает UIGenericButton.Click? Что сломается, если его переименовать?
+target:
+  file: UOP1_Project/Assets/Scripts/UI/UIGenericButton.cs
+  symbol: UIGenericButton.Click
+  line: 49
+direction: incoming
+match: line
+scope: [UOP1_Project/Assets/]
+edges:
+  - rel: unity_event
+    expect: must
+    from: {file: UOP1_Project/Assets/Prefabs/UI/Shared/Popup/GenericButton.prefab, line: 187, object: "кнопка GenericButton (m_OnClick)"}
+    confidence: high
+    how: "Button.m_OnClick: m_Target {fileID: 1342405351670587650} → документ !u!114 на стр. 126, m_Script guid 4100492e… = UIGenericButton.cs.meta; m_MethodName: Click. ВНИМАНИЕ: m_TargetAssemblyTypeName здесь устаревший — «UIButtonSetter, Assembly-CSharp» (класс переименован). Цель надо определять через m_Target → m_Script, а не по строке типа."
+  # --- ловушки: одноимённые Click / OnClick ---
+  - rel: unity_event
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Prefabs/UI/Shared/Settings/Tab_Item.prefab, line: 127}
+    confidence: high
+    how: "m_MethodName: Click, но m_Target {fileID: 2192451556169986123} → m_Script fa7c15a3… = UISettingTabFiller.cs; это UISettingTabFiller.Click (UISettingTabFiller.cs:47)."
+  - rel: call
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/Input/GameInput.cs, line: 2021, symbol: GameInput.MenusActions.SetCallbacks}
+    confidence: high
+    how: "@Click.started -= …OnClick — это InputAction «Click» и метод IMenusActions.OnClick (реализация InputReader.OnClick), к UIGenericButton не относится. То же в стр. 2022–2023, 2070–2072, 1788, 1975."
+  - rel: reference
+    expect: must_not
+    from: {file: UOP1_Project/Assets/Scripts/UI/Settings/UISettingTabFiller.cs, line: 47, symbol: UISettingTabFiller.Click}
+    confidence: high
+    how: "Определение одноимённого метода другого класса."
+  # --- связанное: делегат Clicked, который вызывается внутри Click ---
+  - rel: event_subscribe
+    expect: may
+    from: {file: UOP1_Project/Assets/Scripts/UI/UIPopup.cs, line: 79, symbol: UIPopup.SetPopup}
+    confidence: medium
+    how: "_popupButton1/_popupButton2 (тип UIGenericButton) — подписка на Clicked, который вызывается ИЗ Click (исходящая связь, не вызов Click). Показывает, кого затронет поведение, но не переименование. Аналогично UIPopup.cs:78, 86 и отписки 37–38."
+notes: >
+  Две ловушки сразу. (1) Три метода с именем Click/OnClick в разных классах плюс InputAction «Click» — grep по «Click»
+  даёт десятки строк. (2) В самом правильном ответе строка m_TargetAssemblyTypeName указывает на несуществующий
+  класс UIButtonSetter: инструмент, который сопоставляет UnityEvent с классом по этой строке, пропустит связь;
+  правильно — по m_Target → компонент → m_Script GUID → .meta → файл → класс.
+  GenericButton.prefab вложен в другие UI-префабы (попапы, меню) — это транзитивные may, в эталон не выписаны:
+  вызов настроен только в самом GenericButton.prefab, в экземплярах m_OnClick не переопределён
+  (проверено grep по propertyPath m_OnClick…m_MethodName по всему Assets).

@@ -1,0 +1,81 @@
+schema: 1
+id: excalibur-02-actor-oncollisionstart-hook
+project: excalibur
+commit: 760a28a8544d477a496cbb72a14ac68ff9583354
+languages: [ts]
+kind: consumers
+trap: true
+question: >
+  Кто и как вызывает хук Actor.onCollisionStart? Метод пустой («Override me») — откуда движок его дёргает
+  и какие тесты это проверяют?
+target:
+  file: src/engine/actor.ts
+  symbol: Actor.onCollisionStart
+  line: 1079
+direction: incoming
+match: line
+scope: [src/engine/, src/spec/]
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/engine/collision/collider-component.ts, line: 276, symbol: ColliderComponent.onAdd}
+    confidence: high
+    how: "Внутри обработчика this.events.on('collisionstart', …) (стр. 272), зарегистрированного в onAdd (стр. 241): if (entity instanceof Actor) entity.onCollisionStart(...)."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/collider-component-spec.ts, line: 341}
+    confidence: high
+    how: "vi.spyOn(actor, 'onCollisionStart') — ссылка на метод строкой; тест эмитит 'collisionstart' на comp.events и проверяет вызов (стр. 353)."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/collider-component-spec.ts, line: 353}
+    confidence: high
+    how: "expect(actor.onCollisionStart).toHaveBeenCalledTimes(1)."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/collision-spec.ts, line: 456}
+    confidence: high
+    how: "block1.onCollisionStart = vi.fn() — тест «should not fire onCollisionStart if the collision has been canceled» (стр. 446)."
+  - rel: test
+    expect: must
+    from: {file: src/spec/vitest/collision-spec.ts, line: 468}
+    confidence: high
+    how: "expect(block1.onCollisionStart).not.toHaveBeenCalled()."
+  # --- цепочка событий, по которой приходит вызов (непрямые звенья) ---
+  - rel: event_subscribe
+    expect: may
+    from: {file: src/engine/collision/collider-component.ts, line: 272, symbol: ColliderComponent.onAdd}
+    confidence: high
+    how: "Подписка ColliderComponent.events на 'collisionstart'; в этот эмиттер события приходят через collider.events.pipe(this.events) (стр. 112)."
+  - rel: event_emit
+    expect: may
+    from: {file: src/engine/collision/collision-system.ts, line: 280, symbol: CollisionSystem.runContactStartEnd}
+    confidence: high
+    how: "colliderA.events.emit('collisionstart', …) — источник события; то же для colliderB на стр. 282. Дальше: pipe в ColliderComponent.events → обработчик стр. 272 → вызов стр. 276."
+  - rel: event_emit
+    expect: may
+    from: {file: src/engine/collision/collision-system.ts, line: 282, symbol: CollisionSystem.runContactStartEnd}
+    confidence: high
+    how: "colliderB.events.emit('collisionstart', …)."
+  # --- ловушки ---
+  - rel: event_subscribe
+    expect: must_not
+    from: {file: src/engine/trigger.ts, line: 78, symbol: Trigger.constructor}
+    confidence: high
+    how: "Trigger (extends Actor) слушает событие 'collisionstart' на собственном entity.events (его эмитит collider-component.ts:274), но onCollisionStart не вызывает и не переопределяет."
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/collision/collider-component.ts, line: 283, symbol: ColliderComponent.onAdd}
+    confidence: high
+    how: "entity.onCollisionEnd(...) — соседний хук с похожим именем."
+  - rel: reference
+    expect: must_not
+    from: {file: src/engine/collision/colliders/composite-collider.ts, line: 33}
+    confidence: high
+    how: "Упоминание onCollisionStart в комментарии к опции композитного коллайдера (то же physics-config.ts:79)."
+notes: >
+  Хук вызывается движком из обработчика события, а само событие приходит через pipe() эмиттера коллайдера
+  в эмиттер компонента. Прямой вызов один (стр. 276), остальная цепочка — may. В тестах метод подменяется
+  через vi.spyOn(actor, 'onCollisionStart') — ссылка строкой-именем свойства, её видит только анализатор,
+  понимающий типы vitest (keyof). Переопределения в пользовательском коде (sandbox/src/game.ts:711, 767)
+  вне scope.
