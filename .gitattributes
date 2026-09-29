@@ -1,0 +1,6 @@
+# Единые переводы строк: тесты парсера сверяют текст строк
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.dll binary
+*.exe binary
