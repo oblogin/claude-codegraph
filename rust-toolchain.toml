@@ -1,0 +1,6 @@
+# Pinned so a newer stable clippy can't turn `-D warnings` red without an
+# explicit bump. When bumping, re-run fmt/clippy/test for the whole workspace.
+[toolchain]
+channel = "1.98.1"
+components = ["clippy", "rustfmt"]
+profile = "minimal"

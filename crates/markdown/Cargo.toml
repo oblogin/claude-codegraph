@@ -1,0 +1,11 @@
+[package]
+name = "codegraph-markdown"
+description = "Markdown module: documents, sections, links, mentions"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+codegraph-core.workspace = true

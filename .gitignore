@@ -3,3 +3,10 @@ Docs/Tasks/.obsidian/
 
 # Клоны проектов для набора проверок (Bench): не коммитим, URL и коммит — в Bench/README.md и эталонах
 Bench/projects/
+
+# Rust: сборка и бинарник плагина (кладёт scripts/build.ps1 / build.sh)
+/target/
+plugin/bin/
+
+# Индекс codegraph, если плагин запускали на этом репозитории
+.codegraph/

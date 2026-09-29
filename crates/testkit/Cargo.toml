@@ -1,0 +1,13 @@
+[package]
+name = "codegraph-testkit"
+description = "Test kit: fixture runner, canonical graph export, comparison with expected graphs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+codegraph-index.workspace = true
+codegraph-store.workspace = true
+codegraph-query.workspace = true

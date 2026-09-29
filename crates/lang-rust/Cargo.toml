@@ -1,0 +1,11 @@
+[package]
+name = "codegraph-rust"
+description = "Rust language module: crates, modules, use trees, impls, traits"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+codegraph-core.workspace = true

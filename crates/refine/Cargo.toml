@@ -1,0 +1,12 @@
+[package]
+name = "codegraph-refine"
+description = "Precise refinement via LSP clients and SCIP (after MVP)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+codegraph-core.workspace = true
+codegraph-store.workspace = true

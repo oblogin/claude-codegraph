@@ -1,0 +1,10 @@
+[package]
+name = "codegraph-core"
+description = "Graph model types, facts and module traits; no IO, no SQLite"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]

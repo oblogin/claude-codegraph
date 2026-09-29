@@ -1,0 +1,29 @@
+{
+  "description": "codegraph: code graph and memory hints (never blocks)",
+  "hooks": {
+    "SessionStart": [
+      { "matcher": "startup|resume|clear|compact",
+        "hooks": [ { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/codegraph", "args": ["hook", "session-start"], "timeout": 10 } ] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Grep",
+        "hooks": [ { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/codegraph", "args": ["hook", "pre-grep"], "timeout": 3 } ] },
+      { "matcher": "Read",
+        "hooks": [
+          { "type": "command", "if": "Read(**/*.prefab)", "command": "${CLAUDE_PLUGIN_ROOT}/bin/codegraph", "args": ["hook", "pre-read-asset"], "timeout": 3 },
+          { "type": "command", "if": "Read(**/*.unity)", "command": "${CLAUDE_PLUGIN_ROOT}/bin/codegraph", "args": ["hook", "pre-read-asset"], "timeout": 3 },
+          { "type": "command", "if": "Read(**/*.asset)", "command": "${CLAUDE_PLUGIN_ROOT}/bin/codegraph", "args": ["hook", "pre-read-asset"], "timeout": 3 }
+        ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Edit|Write|MultiEdit",
+        "hooks": [ { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/codegraph", "args": ["hook", "post-edit"], "timeout": 5 } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/codegraph", "args": ["hook", "stop"], "async": true } ] }
+    ],
+    "SessionEnd": [
+      { "hooks": [ { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/codegraph", "args": ["hook", "session-end"] } ] }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+[package]
+name = "codegraph-store"
+description = "Graph storage: SQLite schema, migrations, transactional writes, fact cache"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+codegraph-core.workspace = true

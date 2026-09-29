@@ -1,0 +1,15 @@
+{
+  "name": "claude-codegraph",
+  "description": "Локальный маркетплейс плагина codegraph — граф связей кода и память для агентов Claude Code",
+  "owner": {
+    "name": "oblogin"
+  },
+  "plugins": [
+    {
+      "name": "codegraph",
+      "description": "Граф связей кода (C# и Unity, JS/TS, Go, Rust, Markdown) и память для агентов: сервер MCP cg, хуки-подсказки, команды /codegraph:*",
+      "source": "./plugin",
+      "category": "development"
+    }
+  ]
+}

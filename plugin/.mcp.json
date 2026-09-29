@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "cg": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/codegraph",
+      "args": ["mcp"]
+    }
+  }
+}

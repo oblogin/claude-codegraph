@@ -1,0 +1,10 @@
+{
+  "name": "codegraph",
+  "displayName": "Code graph (claude-codegraph)",
+  "version": "0.1.0",
+  "description": "Local code graph and memory for agents: C# with Unity scenes and prefabs, JS/TS, Go, Rust, Markdown; MCP server cg, hint hooks that never block, /codegraph:* commands",
+  "author": {
+    "name": "oblogin"
+  },
+  "keywords": ["code-graph", "unity", "mcp", "impact-analysis", "memory"]
+}

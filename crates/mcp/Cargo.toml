@@ -1,0 +1,21 @@
+[package]
+name = "codegraph-mcp"
+description = "MCP server over stdio: the six agent tools of ADR-003 and the handshake instructions"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+codegraph-query.workspace = true
+codegraph-index.workspace = true
+anyhow.workspace = true
+rmcp.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros", "io-util"] }

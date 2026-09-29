@@ -1,0 +1,11 @@
+[package]
+name = "codegraph-ts"
+description = "TypeScript/JavaScript language module: extraction and module resolution"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+codegraph-core.workspace = true
