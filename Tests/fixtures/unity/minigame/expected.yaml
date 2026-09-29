@@ -1,0 +1,734 @@
+# Ожидаемый граф синтетической базы Tests/fixtures/unity/minigame (F02-03): Unity 2022.3, Force Text.
+# Формат — Bench/README.md, «Формат эталона»; один YAML-документ (---) = один эталон.
+# Пути — от корня базы (папка этого файла). Строки и fileID проверены скриптом при составлении.
+# fileID — строкой (64-битные числа, бывают отрицательные). Символы C#: Класс.Член без пространства имён.
+# Узлы YAML: line — строка ссылки (m_Script, m_SourcePrefab, m_MethodName, ключ поля, propertyPath…),
+# fileID — документ компонента или PrefabInstance, object — путь GameObject.
+---
+schema: 1
+id: unity-mg-01-coin-placement
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: unity_placement
+trap: true
+question: >
+  На каких объектах в сценах и префабах висит компонент Coin (с учётом вложенных префабов, вариантов и удалённых
+  компонентов)?
+target:
+  file: Assets/Scripts/Pickups/Coin.cs
+  symbol: "Coin"
+  line: 5
+direction: incoming
+match: file
+scope: [Assets/]
+edges:
+  - rel: script_on_object
+    expect: must
+    from: {file: Assets/Prefabs/Pickups/Coin.prefab, line: 66, object: "Coin", fileID: "7926605254557346216"}
+    confidence: high
+    how: "Документ !u!114: m_Script guid c520bce5… = Coin.cs.meta."
+  - rel: script_via_prefab
+    expect: must
+    from: {file: Assets/Prefabs/Pickups/CoinCluster.prefab, line: 92, object: "CoinCluster/Coin_A", fileID: "3623843528053332857"}
+    via: [Assets/Prefabs/Pickups/Coin.prefab]
+    confidence: high
+    how: "Два PrefabInstance Coin.prefab (Coin_A, Coin_B), m_RemovedComponents: [] — Coin остаётся. GUID скрипта в файле не встречается."
+  - rel: script_via_prefab
+    expect: must
+    from: {file: Assets/Scenes/Main.unity, line: 635, object: "CoinCluster", fileID: "512903377"}
+    via: [Assets/Prefabs/Pickups/Coin.prefab, Assets/Prefabs/Pickups/CoinCluster.prefab]
+    confidence: high
+    how: "PrefabInstance CoinCluster.prefab в сцене; внутри — два экземпляра Coin.prefab."
+  - rel: script_via_prefab
+    expect: must_not
+    from: {file: Assets/Prefabs/Pickups/MagnetCoin.prefab, line: 63, object: "MagnetCoin", fileID: "431555780553991776"}
+    via: [Assets/Prefabs/Pickups/Coin.prefab]
+    confidence: high
+    how: "Вариант Coin.prefab, но m_RemovedComponents содержит {fileID: 7926605254557346216, guid: c520…} — это компонент Coin."
+  - rel: script_via_prefab
+    expect: must_not
+    from: {file: Assets/Scenes/Bonus.unity, line: 137, object: "MagnetCoin", fileID: "1178390412"}
+    via: [Assets/Prefabs/Pickups/Coin.prefab, Assets/Prefabs/Pickups/MagnetCoin.prefab]
+    confidence: high
+    how: "Сцена содержит только MagnetCoin, где Coin удалён."
+---
+schema: 1
+id: unity-mg-02-magnet-added-component
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: unity_placement
+trap: true
+question: >
+  На каких объектах висит компонент Magnet?
+target:
+  file: Assets/Scripts/Pickups/Magnet.cs
+  symbol: "Magnet"
+  line: 6
+direction: incoming
+match: file
+scope: [Assets/]
+edges:
+  - rel: script_on_object
+    expect: must
+    from: {file: Assets/Prefabs/Pickups/MagnetCoin.prefab, line: 78, object: "MagnetCoin", fileID: "6452186020873138450"}
+    confidence: high
+    how: "Компонент добавлен в вариант: m_AddedComponents[].addedObject → документ !u!114 с m_Script = Magnet.cs.meta; m_GameObject — stripped-заглушка корня Coin.prefab."
+  - rel: script_via_prefab
+    expect: must
+    from: {file: Assets/Scenes/Bonus.unity, line: 137, object: "MagnetCoin", fileID: "1178390412"}
+    via: [Assets/Prefabs/Pickups/MagnetCoin.prefab]
+    confidence: high
+    how: "PrefabInstance MagnetCoin.prefab в сцене."
+  - rel: script_on_object
+    expect: must_not
+    from: {file: Assets/Prefabs/Pickups/Coin.prefab, line: 66, object: "Coin", fileID: "7926605254557346216"}
+    confidence: high
+    how: "База варианта: Magnet в ней нет."
+  - rel: script_via_prefab
+    expect: must_not
+    from: {file: Assets/Prefabs/Pickups/CoinCluster.prefab, line: 92, object: "CoinCluster/Coin_A", fileID: "3623843528053332857"}
+    via: [Assets/Prefabs/Pickups/Coin.prefab]
+    confidence: high
+    how: "Экземпляры базового Coin.prefab, не варианта."
+  - rel: script_via_prefab
+    expect: must_not
+    from: {file: Assets/Scenes/Main.unity, line: 635, object: "CoinCluster", fileID: "512903377"}
+    via: [Assets/Prefabs/Pickups/Coin.prefab, Assets/Prefabs/Pickups/CoinCluster.prefab]
+    confidence: high
+    how: "В сцене только CoinCluster (экземпляры базового Coin)."
+---
+schema: 1
+id: unity-mg-03-playercontroller-placement
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: unity_placement
+trap: true
+question: >
+  На каких объектах висит PlayerController?
+target:
+  file: Assets/Scripts/Player/PlayerController.cs
+  symbol: "PlayerController"
+  line: 7
+direction: incoming
+match: file
+scope: [Assets/]
+edges:
+  - rel: script_on_object
+    expect: must
+    from: {file: Assets/Prefabs/Player.prefab, line: 98, object: "Player", fileID: "703910757088782137"}
+    confidence: high
+    how: "m_Script guid ccdea3ec… = PlayerController.cs.meta."
+  - rel: script_via_prefab
+    expect: must
+    from: {file: Assets/Scenes/Main.unity, line: 578, object: "Player", fileID: "1340218790"}
+    via: [Assets/Prefabs/Player.prefab]
+    confidence: high
+    how: "PrefabInstance Player.prefab в сцене."
+  - rel: script_on_object
+    expect: must_not
+    from: {file: Assets/Prefabs/Enemies/Enemy.prefab, line: 90, object: "Enemy", fileID: "5720889755631353984"}
+    confidence: high
+    how: "Enemy.prefab — другой скрипт (Enemy.cs); общих полей _speed/jumpForce недостаточно."
+---
+schema: 1
+id: unity-mg-04-enemy-prefab-consumers
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: consumers
+trap: true
+question: >
+  Кто использует префаб Enemy.prefab (варианты, ссылки из ассетов)?
+target:
+  file: Assets/Prefabs/Enemies/Enemy.prefab
+direction: incoming
+match: file
+scope: [Assets/]
+edges:
+  - rel: prefab_variant
+    expect: must
+    from: {file: Assets/Prefabs/Enemies/Boss.prefab, line: 75, object: "Boss", fileID: "7358301492953411968"}
+    confidence: high
+    how: "Корневой PrefabInstance без родителя (m_TransformParent: {fileID: 0}), m_SourcePrefab = Enemy.prefab."
+  - rel: prefab_variant
+    expect: must
+    from: {file: Assets/Resources/Enemies/Slime.prefab, line: 63, object: "Slime", fileID: "7373809947180058948"}
+    confidence: high
+    how: "Вариант в папке Resources (загружается Resources.Load)."
+  - rel: asset_ref
+    expect: must
+    from: {file: Assets/Data/Waves.asset, line: 15, object: "Waves", fileID: "11400000"}
+    confidence: high
+    how: "Поле _enemyPrefab: {fileID: <корневой GameObject>, guid: 6a5e406b…}."
+  - rel: prefab_variant
+    expect: must_not
+    from: {file: Assets/Prefabs/Enemies/Slime.prefab, object: "Slime"}
+    confidence: high
+    how: "Одноимённый Slime.prefab вне Resources — самостоятельный префаб, не вариант Enemy."
+---
+schema: 1
+id: unity-mg-05-coin-prefab-nesting
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: consumers
+trap: false
+question: >
+  Где используется префаб Coin.prefab (вложенные экземпляры и варианты)?
+target:
+  file: Assets/Prefabs/Pickups/Coin.prefab
+direction: incoming
+match: file
+scope: [Assets/]
+edges:
+  - rel: prefab_instance
+    expect: must
+    from: {file: Assets/Prefabs/Pickups/CoinCluster.prefab, line: 92, object: "CoinCluster/Coin_A", fileID: "3623843528053332857"}
+    confidence: high
+    how: "Два PrefabInstance Coin.prefab внутри CoinCluster (m_TransformParent — Transform корня)."
+  - rel: prefab_variant
+    expect: must
+    from: {file: Assets/Prefabs/Pickups/MagnetCoin.prefab, line: 63, object: "MagnetCoin", fileID: "431555780553991776"}
+    confidence: high
+    how: "Корневой PrefabInstance без родителя — вариант."
+  - rel: prefab_instance
+    expect: may
+    from: {file: Assets/Scenes/Main.unity, line: 635, object: "CoinCluster", fileID: "512903377"}
+    via: [Assets/Prefabs/Pickups/CoinCluster.prefab]
+    confidence: high
+    how: "Транзитивно, через CoinCluster.prefab."
+  - rel: prefab_instance
+    expect: may
+    from: {file: Assets/Scenes/Bonus.unity, line: 137, object: "MagnetCoin", fileID: "1178390412"}
+    via: [Assets/Prefabs/Pickups/MagnetCoin.prefab]
+    confidence: high
+    how: "Транзитивно, через вариант MagnetCoin.prefab."
+---
+schema: 1
+id: unity-mg-06-mainmenu-onplayclicked-unityevent
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: unity_event
+trap: true
+question: >
+  Кто вызывает MainMenu.OnPlayClicked? В C# вызовов нет.
+target:
+  file: Assets/Scripts/UI/MainMenu.cs
+  symbol: "MainMenu.OnPlayClicked"
+  line: 11
+direction: incoming
+match: line
+line_tolerance: 0
+scope: [Assets/]
+edges:
+  - rel: unity_event
+    expect: must
+    from: {file: Assets/Scenes/Main.unity, line: 229, object: "Canvas/PlayButton", fileID: "1203885102"}
+    confidence: high
+    how: "Button.m_OnClick: m_Target → компонент MainMenu на Canvas (m_Script eb8015d2…), m_TargetAssemblyTypeName: Game.UI.MainMenu, m_MethodName: OnPlayClicked."
+  - rel: unity_event
+    expect: must_not
+    from: {file: Assets/Scenes/Main.unity, line: 310, object: "Canvas/TutorialButton", fileID: "418227652"}
+    confidence: high
+    how: "Та же строка m_MethodName: OnPlayClicked, но m_Target → компонент Tutorial (Game.UI.Tutorial) — одноимённый метод другого класса."
+---
+schema: 1
+id: unity-mg-07-mainmenu-showgameover-override
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: unity_event
+trap: false
+question: >
+  Кто вызывает MainMenu.ShowGameOver?
+target:
+  file: Assets/Scripts/UI/MainMenu.cs
+  symbol: "MainMenu.ShowGameOver"
+  line: 17
+direction: incoming
+match: line
+line_tolerance: 0
+scope: [Assets/]
+edges:
+  - rel: unity_event
+    expect: must
+    from: {file: Assets/Scenes/Main.unity, line: 563, object: "Player", fileID: "1340218790"}
+    confidence: high
+    how: "UnityEvent Health.OnDied задан переопределением экземпляра Player.prefab: propertyPath OnDied.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName = ShowGameOver; m_Target → {fileID: 1987412333} (MainMenu в этой сцене). В Player.prefab m_Calls: []."
+notes: >
+  Вызов существует только в сцене: в самом Player.prefab список m_Calls пуст. Владелец события — компонент
+  Health из Player.prefab (target переопределения), но доказательство (строка) — в Main.unity.
+---
+schema: 1
+id: unity-mg-08-ontriggerenter-message
+project: fixture-unity-minigame
+languages: [csharp]
+kind: engine_message
+trap: true
+question: >
+  Кто вызывает PlayerController.OnTriggerEnter? Это мёртвый код?
+target:
+  file: Assets/Scripts/Player/PlayerController.cs
+  symbol: "PlayerController.OnTriggerEnter"
+  line: 37
+direction: incoming
+match: line
+line_tolerance: 0
+scope: [Assets/]
+edges:
+  - rel: engine_message
+    expect: must
+    from: {external: "unity:message:OnTriggerEnter"}
+    confidence: high
+    how: "PlayerController : MonoBehaviour, сообщение физики OnTriggerEnter(Collider)."
+  - rel: script_on_object
+    expect: may
+    from: {file: Assets/Prefabs/Player.prefab, line: 98, object: "Player", fileID: "703910757088782137"}
+    confidence: high
+    how: "Где сработает: объект Player с CapsuleCollider."
+  - rel: engine_message
+    expect: must_not
+    from: {file: Assets/Scripts/Pickups/Coin.cs, line: 12, symbol: "Coin.OnTriggerEnter"}
+    confidence: high
+    how: "Coin.OnTriggerEnter — то же сообщение другого класса."
+---
+schema: 1
+id: unity-mg-09-awake-message
+project: fixture-unity-minigame
+languages: [csharp]
+kind: engine_message
+trap: true
+question: >
+  Кто вызывает PlayerController.Awake?
+target:
+  file: Assets/Scripts/Player/PlayerController.cs
+  symbol: "PlayerController.Awake"
+  line: 16
+direction: incoming
+match: line
+line_tolerance: 0
+scope: [Assets/]
+edges:
+  - rel: engine_message
+    expect: must
+    from: {external: "unity:message:Awake"}
+    confidence: high
+    how: "Сообщение Awake у наследника MonoBehaviour."
+  - rel: engine_message
+    expect: must_not
+    from: {file: Assets/Scripts/Player/Health.cs, line: 16, symbol: "Health.Awake"}
+    confidence: high
+    how: "Health.Awake — одноимённое сообщение другого класса."
+---
+schema: 1
+id: unity-mg-10-patrol-update-not-message
+project: fixture-unity-minigame
+languages: [csharp]
+kind: engine_message
+trap: true
+question: >
+  Кто вызывает PatrolBehaviour.Update? Это сообщение движка?
+target:
+  file: Assets/Scripts/Enemies/PatrolBehaviour.cs
+  symbol: "PatrolBehaviour.Update"
+  line: 18
+direction: incoming
+match: line
+line_tolerance: 0
+scope: [Assets/]
+edges:
+  - rel: call_interface
+    expect: must
+    from: {file: Assets/Scripts/Enemies/Enemy.cs, line: 23, symbol: "Enemy.Update"}
+    confidence: high
+    how: "_behaviour?.Update(this); поле _behaviour типа IEnemyBehaviour, в Enemy.prefab — PatrolBehaviour ([SerializeReference])."
+  - rel: engine_message
+    expect: must_not
+    from: {external: "unity:message:Update"}
+    confidence: high
+    how: "PatrolBehaviour — обычный [Serializable]-класс, не MonoBehaviour: движок его Update не вызывает."
+---
+schema: 1
+id: unity-mg-11-lowercase-ontriggerexit
+project: fixture-unity-minigame
+languages: [csharp]
+kind: engine_message
+trap: true
+question: >
+  Вызывает ли движок Coin.onTriggerExit?
+target:
+  file: Assets/Scripts/Pickups/Coin.cs
+  symbol: "Coin.onTriggerExit"
+  line: 18
+direction: incoming
+match: line
+line_tolerance: 0
+scope: [Assets/]
+edges:
+  - rel: engine_message
+    expect: must_not
+    from: {external: "unity:message:OnTriggerExit"}
+    confidence: high
+    how: "Имя со строчной буквы — не сообщение OnTriggerExit (имена сообщений чувствительны к регистру). Метод не вызывается никем."
+notes: >
+  Эталон без must: проверяет только точность (метод действительно мёртвый).
+---
+schema: 1
+id: unity-mg-12-playercontroller-speed-rename
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: impact
+trap: true
+change: rename
+question: >
+  Хочу переименовать поле PlayerController._speed. Где лежат его сериализованные данные?
+target:
+  file: Assets/Scripts/Player/PlayerController.cs
+  symbol: "PlayerController._speed"
+  line: 9
+direction: incoming
+match: file
+scope: [Assets/]
+edges:
+  - rel: reference
+    expect: must
+    from: {file: Assets/Scripts/Player/PlayerController.cs, line: 26, symbol: "PlayerController.Update"}
+    confidence: high
+    how: "Чтение _speed в Update."
+  - rel: serialized_field
+    expect: must
+    from: {file: Assets/Prefabs/Player.prefab, line: 101, object: "Player", fileID: "703910757088782137"}
+    confidence: high
+    how: "Ключ _speed: 5 в теле компонента PlayerController."
+  - rel: serialized_field
+    expect: must
+    from: {file: Assets/Scenes/Main.unity, line: 539, object: "Player", fileID: "1340218790"}
+    confidence: high
+    how: "Переопределение экземпляра: target {fileID: 703910757088782137 (PlayerController), guid Player.prefab}, propertyPath: _speed."
+  - rel: serialized_field
+    expect: must_not
+    from: {file: Assets/Prefabs/Enemies/Enemy.prefab, line: 93, object: "Enemy", fileID: "5720889755631353984"}
+    confidence: high
+    how: "_speed: 3 — поле Enemy._speed (m_Script = Enemy.cs)."
+  - rel: serialized_field
+    expect: must_not
+    from: {file: Assets/Prefabs/Enemies/Boss.prefab, line: 68, object: "Boss", fileID: "7358301492953411968"}
+    confidence: high
+    how: "propertyPath: _speed с target = компонент Enemy в Enemy.prefab — поле Enemy._speed."
+---
+schema: 1
+id: unity-mg-13-jumpheight-formerlyserializedas
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: impact
+trap: true
+change: rename
+question: >
+  Хочу переименовать поле PlayerController._jumpHeight (у него [FormerlySerializedAs("jumpForce")]). Где его
+  данные?
+target:
+  file: Assets/Scripts/Player/PlayerController.cs
+  symbol: "PlayerController._jumpHeight"
+  line: 10
+direction: incoming
+match: file
+scope: [Assets/]
+edges:
+  - rel: reference
+    expect: must
+    from: {file: Assets/Scripts/Player/PlayerController.cs, line: 32, symbol: "PlayerController.Jump"}
+    confidence: high
+    how: "Чтение _jumpHeight в Jump."
+  - rel: serialized_field
+    expect: must
+    from: {file: Assets/Prefabs/Player.prefab, line: 102, object: "Player", fileID: "703910757088782137"}
+    confidence: high
+    how: "Ключ _jumpHeight: 2 в Player.prefab (префаб пересохранён после переименования)."
+  - rel: serialized_field
+    expect: must
+    from: {file: Assets/Scenes/Main.unity, line: 543, object: "Player", fileID: "1340218790"}
+    confidence: high
+    how: "propertyPath: jumpForce — старое имя поля в переопределении сцены (сцена не пересохранена); Unity применит его к _jumpHeight благодаря [FormerlySerializedAs(\"jumpForce\")]. target — компонент PlayerController."
+  - rel: serialized_field
+    expect: must_not
+    from: {file: Assets/Prefabs/Enemies/Enemy.prefab, line: 94, object: "Enemy", fileID: "5720889755631353984"}
+    confidence: high
+    how: "jumpForce: 4 — собственное поле Enemy.jumpForce."
+  - rel: serialized_field
+    expect: must_not
+    from: {file: Assets/Resources/Enemies/Slime.prefab, line: 56, object: "Slime", fileID: "7373809947180058948"}
+    confidence: high
+    how: "propertyPath: jumpForce в варианте Enemy.prefab — поле Enemy.jumpForce."
+  - rel: reference
+    expect: must_not
+    from: {file: Assets/Scripts/Enemies/Enemy.cs, line: 30, symbol: "Enemy.OnAttackHit"}
+    confidence: high
+    how: "jumpForce в Enemy.cs — поле Enemy."
+notes: >
+  Ловушка в обе стороны: в Main.unity ключ называется jumpForce, но относится к PlayerController; в Enemy.prefab
+  и Resources/Enemies/Slime.prefab тот же ключ относится к Enemy.
+---
+schema: 1
+id: unity-mg-14-chasebehaviour-serializereference
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: consumers
+trap: true
+question: >
+  Где в ассетах хранятся экземпляры ChaseBehaviour ([SerializeReference])?
+target:
+  file: Assets/Scripts/Enemies/ChaseBehaviour.cs
+  symbol: "ChaseBehaviour"
+  line: 8
+direction: incoming
+match: line
+line_tolerance: 0
+scope: [Assets/]
+edges:
+  - rel: reference
+    expect: must
+    from: {file: Assets/Data/Waves.asset, line: 24, object: "Waves", fileID: "11400000"}
+    confidence: high
+    how: "references.RefIds[].type: {class: ChaseBehaviour, ns: Game.Enemies, asm: Game.Runtime} — совпадает с классом."
+  - rel: reference
+    expect: must_not
+    from: {file: Assets/Data/Waves.asset, line: 28, object: "Waves", fileID: "11400000"}
+    confidence: high
+    how: "{class: ChaseBehaviour, ns: Game.AI, asm: Game.Runtime} — старое пространство имён, такого типа нет (класс перенесён без [MovedFrom]); это «потерянные» данные, а не ссылка на Game.Enemies.ChaseBehaviour."
+notes: >
+  В ADR-006 это ребро references_type; в словаре Bench/README.md такого вида нет, записано как reference.
+---
+schema: 1
+id: unity-mg-15-patrolbehaviour-serializereference
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: consumers
+trap: false
+question: >
+  Где используется PatrolBehaviour?
+target:
+  file: Assets/Scripts/Enemies/PatrolBehaviour.cs
+  symbol: "PatrolBehaviour"
+  line: 7
+direction: incoming
+match: line
+line_tolerance: 0
+scope: [Assets/]
+edges:
+  - rel: reference
+    expect: must
+    from: {file: Assets/Prefabs/Enemies/Enemy.prefab, line: 101, object: "Enemy", fileID: "5720889755631353984"}
+    confidence: high
+    how: "RefIds[].type: {class: PatrolBehaviour, ns: Game.Enemies, asm: Game.Runtime} в компоненте Enemy."
+  - rel: reference
+    expect: must
+    from: {file: Assets/Scripts/Enemies/Enemy.cs, line: 10, symbol: "Enemy._behaviour"}
+    confidence: high
+    how: "Инициализатор поля new PatrolBehaviour()."
+---
+schema: 1
+id: unity-mg-16-boss-addressables
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: consumers
+trap: true
+question: >
+  Кто ссылается на Boss.prefab (Addressables)?
+target:
+  file: Assets/Prefabs/Enemies/Boss.prefab
+direction: incoming
+match: line
+line_tolerance: 0
+scope: [Assets/]
+edges:
+  - rel: asset_ref
+    expect: must
+    from: {file: Assets/Scenes/Main.unity, line: 480, object: "Spawner", fileID: "705507992"}
+    confidence: high
+    how: "AssetReferenceGameObject _bossRef: m_AssetGUID: c7cab19f… — голый GUID без {fileID, guid}."
+  - rel: asset_ref
+    expect: must
+    from: {file: Assets/Scripts/Enemies/EnemySpawner.cs, line: 39, symbol: "EnemySpawner.SpawnBossByAddress"}
+    confidence: high
+    how: "Addressables.LoadAssetAsync<GameObject>(\"Enemies/Boss\") — адрес из группы Default Local Group (m_Address: Enemies/Boss)."
+  - rel: asset_ref
+    expect: may
+    from: {file: "Assets/AddressableAssetsData/AssetGroups/Default Local Group.asset", line: 18, object: "Default Local Group", fileID: "11400000"}
+    confidence: high
+    how: "Запись группы Addressables: m_GUID ассета и его адрес. Это регистрация, а не использование."
+  - rel: asset_ref
+    expect: must_not
+    from: {file: Assets/Scripts/Enemies/EnemySpawner.cs, line: 46, symbol: "EnemySpawner.SpawnBossFromResources"}
+    confidence: high
+    how: "Resources.Load(\"Enemies/Boss\") ищет только в папках Resources; Boss.prefab там нет — вернёт null."
+---
+schema: 1
+id: unity-mg-17-resources-slime-consumers
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: consumers
+trap: false
+question: >
+  Кто загружает Assets/Resources/Enemies/Slime.prefab?
+target:
+  file: Assets/Resources/Enemies/Slime.prefab
+direction: incoming
+match: line
+line_tolerance: 0
+scope: [Assets/]
+edges:
+  - rel: asset_ref
+    expect: must
+    from: {file: Assets/Scripts/Enemies/EnemySpawner.cs, line: 20, symbol: "EnemySpawner.SpawnSlime"}
+    confidence: high
+    how: "Resources.Load<GameObject>(\"Enemies/Slime\") — литерал; путь от папки Resources без расширения."
+  - rel: asset_ref
+    expect: may
+    from: {file: Assets/Scripts/Enemies/EnemySpawner.cs, line: 27, symbol: "EnemySpawner.SpawnByName"}
+    confidence: high
+    how: "Resources.Load(\"Enemies/\" + enemyName) — не литерал: цель статически неизвестна. Честный ответ — слепая зона (unresolved dynamic), угаданное ребро не штрафуется."
+---
+schema: 1
+id: unity-mg-18-spawnslime-callees
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: callees
+trap: true
+question: >
+  Какой ассет загружает EnemySpawner.SpawnSlime?
+target:
+  file: Assets/Scripts/Enemies/EnemySpawner.cs
+  symbol: "EnemySpawner.SpawnSlime"
+  line: 20
+direction: outgoing
+match: file
+scope: [Assets/]
+edges:
+  - rel: asset_ref
+    expect: must
+    to: {file: Assets/Resources/Enemies/Slime.prefab, object: "Slime"}
+    confidence: high
+    how: "Единственный ассет по пути Resources/Enemies/Slime.*."
+  - rel: asset_ref
+    expect: must_not
+    to: {file: Assets/Prefabs/Enemies/Slime.prefab, object: "Slime"}
+    confidence: high
+    how: "Одноимённый Slime.prefab вне Resources: Resources.Load его не видит."
+---
+schema: 1
+id: unity-mg-19-enemy-onattackhit-anim-event
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: engine_message
+trap: true
+question: >
+  Кто вызывает Enemy.OnAttackHit? В C# вызовов нет.
+target:
+  file: Assets/Scripts/Enemies/Enemy.cs
+  symbol: "Enemy.OnAttackHit"
+  line: 27
+direction: incoming
+match: line
+line_tolerance: 0
+scope: [Assets/]
+edges:
+  - rel: string_ref
+    expect: must
+    from: {file: Assets/Animations/Enemy_Attack.anim, line: 80, object: "Enemy_Attack", fileID: "7400000"}
+    confidence: high
+    how: "Animation Event: m_Events[].functionName: OnAttackHit в клипе Enemy_Attack (клип — в Enemy.controller, контроллер — в Animator на Enemy.prefab). Среди наследников MonoBehaviour метод с таким именем один."
+  - rel: call
+    expect: must_not
+    from: {file: Assets/Scripts/Enemies/Enemy.cs, line: 30, symbol: "Enemy.OnAttackHit"}
+    confidence: high
+    how: "_stats.OnAttackHit(jumpForce) внутри метода — вызов CombatStats.OnAttackHit, не рекурсия."
+notes: >
+  В ADR-006 это ребро anim_event; в словаре Bench/README.md такого вида нет, записано как string_ref (имя метода
+  строкой).
+---
+schema: 1
+id: unity-mg-20-combatstats-onattackhit
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает CombatStats.OnAttackHit?
+target:
+  file: Assets/Scripts/Enemies/CombatStats.cs
+  symbol: "CombatStats.OnAttackHit"
+  line: 10
+direction: incoming
+match: line
+line_tolerance: 0
+scope: [Assets/]
+edges:
+  - rel: call
+    expect: must
+    from: {file: Assets/Scripts/Enemies/Enemy.cs, line: 30, symbol: "Enemy.OnAttackHit"}
+    confidence: high
+    how: "_stats.OnAttackHit(jumpForce); поле _stats типа CombatStats."
+  - rel: string_ref
+    expect: must_not
+    from: {file: Assets/Animations/Enemy_Attack.anim, line: 80, object: "Enemy_Attack", fileID: "7400000"}
+    confidence: high
+    how: "Animation Event вызывает методы только компонентов MonoBehaviour на объекте с Animator; CombatStats — обычный класс."
+---
+schema: 1
+id: unity-mg-21-health-takedamage-tests
+project: fixture-unity-minigame
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Health.TakeDamage и какие тесты его проверяют?
+target:
+  file: Assets/Scripts/Player/Health.cs
+  symbol: "Health.TakeDamage"
+  line: 27
+direction: incoming
+match: symbol
+scope: [Assets/]
+edges:
+  - rel: test
+    expect: must
+    from: {file: Assets/Tests/EditMode/HealthTests.cs, line: 21, symbol: "HealthTests.TakeDamage_ReducesCurrent"}
+    confidence: high
+    how: "[Test] в Assets/Tests/EditMode (сборка Game.Tests.EditMode → Game.Runtime)."
+  - rel: test
+    expect: must
+    from: {file: Assets/Tests/EditMode/HealthTests.cs, line: 31, symbol: "HealthTests.TakeDamage_Lethal_InvokesOnDied"}
+    confidence: high
+    how: "[Test], проверяет вызов OnDied."
+  - rel: call
+    expect: must
+    from: {file: Assets/Scripts/Player/PlayerController.cs, line: 39, symbol: "PlayerController.OnTriggerEnter"}
+    confidence: high
+    how: "_health.TakeDamage(1); поле _health типа Health."
+  - rel: test
+    expect: must_not
+    from: {file: Assets/Tests/EditMode/HealthTests.cs, line: 36, symbol: "HealthTests.Heal_ClampsToMax"}
+    confidence: high
+    how: "Тест того же класса проверяет Heal, TakeDamage не вызывает."
+---
+schema: 1
+id: unity-mg-22-bonus-scene-loadscene
+project: fixture-unity-minigame
+languages: [csharp, unity-yaml]
+kind: consumers
+trap: false
+question: >
+  Кто загружает сцену Bonus.unity?
+target:
+  file: Assets/Scenes/Bonus.unity
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: asset_ref
+    expect: must
+    from: {file: Assets/Scripts/UI/MainMenu.cs, line: 13, symbol: "MainMenu.OnPlayClicked"}
+    confidence: high
+    how: "SceneManager.LoadScene(\"Bonus\") — имя сцены из EditorBuildSettings."
+  - rel: asset_ref
+    expect: may
+    from: {file: ProjectSettings/EditorBuildSettings.asset, line: 12}
+    confidence: high
+    how: "Запись в списке сцен сборки (путь + GUID) — регистрация, а не загрузка."

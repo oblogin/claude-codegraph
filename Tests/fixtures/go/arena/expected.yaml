@@ -1,0 +1,552 @@
+# Ожидаемый граф синтетической базы Tests/fixtures/go/arena (F02-03).
+# Формат — Bench/README.md («Формат эталона»); один YAML-документ (между `---`) = один эталон.
+# Пути — от корня базы (папка этого файла), строки — с 1; line_tolerance: 0 — строки в синтетике точные,
+# а соседние строки часто принадлежат разным записям (must рядом с must_not). confidence у синтетики всегда high.
+# Символы Go: `pkg.Func`, `pkg.Type`, `pkg.Type.Method` (получатель-значение), `pkg.(*Type).Method` (указатель),
+# метод интерфейса — `pkg.Iface.Method`; модуль — example.com/arena (go.mod).
+---
+schema: 1
+id: go-arena-01-entity-implicit-implementations
+project: fixture-go-arena
+languages: [go]
+kind: implementations
+trap: true
+question: >
+  Какие типы реализуют интерфейс entity.Entity (ID() int + Update(dt float64))? В Go реализация неявная — по
+  набору методов.
+target:
+  file: entity/entity.go
+  symbol: entity.Entity
+  line: 12
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: implement
+    expect: must
+    from: {file: entity/player.go, line: 9, symbol: entity.Player}
+    confidence: high
+    how: "*Player: Update — свой метод (стр. 22), ID — продвинут из встроенного по значению Base ((*Base).ID, entity.go:24; для *Player доступен)."
+  - rel: implement
+    expect: must
+    from: {file: entity/monster.go, line: 6, symbol: entity.Monster}
+    confidence: high
+    how: "*Monster: Update (стр. 19), ID — продвинут из встроенного указателя *Base. Передаётся как Entity в w.Add (world.go:84)."
+  - rel: implement
+    expect: must
+    from: {file: game/world_test.go, line: 9, symbol: game_test.fakeEntity}
+    confidence: high
+    how: "Тестовая подделка во внешнем тестовом пакете game_test: ID (стр. 14) и Update (стр. 16); передаётся в w.Add(f) (стр. 21)."
+  - rel: inherit
+    expect: may
+    from: {file: game/world.go, line: 14, symbol: game.Actor}
+    confidence: high
+    how: "Интерфейс Actor встраивает entity.Entity — расширение интерфейса, не реализация; строка — строка встраивания."
+  # --- ловушки: «почти» реализации ---
+  - rel: implement
+    expect: must_not
+    from: {file: entity/crate.go, line: 4, symbol: entity.Crate}
+    confidence: high
+    how: "Crate встраивает Base (есть ID), но метода Update нет."
+  - rel: implement
+    expect: must_not
+    from: {file: ui/hud.go, line: 10, symbol: ui.HUD}
+    confidence: high
+    how: "HUD имеет Update(dt float64) с той же сигнатурой, но нет ID."
+notes: >
+  Неявные интерфейсы: слова implements в коде нет. ADR-006 8.4 строит implements в type_pass по набору методов
+  (INFERRED 0.8), поэтому реализации — must. Для Monster нужен набор методов с учётом встраивания указателя.
+---
+schema: 1
+id: go-arena-02-base-embedding
+project: fixture-go-arena
+languages: [go]
+kind: implementations
+trap: false
+question: >
+  Какие структуры встраивают entity.Base?
+target:
+  file: entity/entity.go
+  symbol: entity.Base
+  line: 18
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: inherit
+    expect: must
+    from: {file: entity/player.go, line: 10, symbol: entity.Player}
+    confidence: high
+    how: "Встраивание по значению: поле без имени Base."
+  - rel: inherit
+    expect: must
+    from: {file: entity/monster.go, line: 7, symbol: entity.Monster}
+    confidence: high
+    how: "Встраивание указателя: *Base."
+  - rel: inherit
+    expect: must
+    from: {file: entity/crate.go, line: 5, symbol: entity.Crate}
+    confidence: high
+    how: "Встраивание по значению."
+  - rel: reference
+    expect: may
+    from: {file: entity/player.go, line: 18, symbol: entity.NewPlayer}
+    confidence: high
+    how: "Base: newBase() — поле встраивания по имени типа в литерале."
+notes: >
+  Строка связи — строка встраиваемого поля (там стоит ссылка на Base); ответ со строкой объявления типа
+  (player.go:9 и т. п.) при line_tolerance 0 не засчитается — адаптер инструмента должен отдавать место ссылки.
+---
+schema: 1
+id: go-arena-03-drawer-implementations
+project: fixture-go-arena
+languages: [go]
+kind: implementations
+trap: true
+question: >
+  Какие типы реализуют render.Drawer (Draw(c *Canvas)) и какие интерфейсы его встраивают?
+target:
+  file: render/canvas.go
+  symbol: render.Drawer
+  line: 7
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: implement
+    expect: must
+    from: {file: entity/player.go, line: 9, symbol: entity.Player}
+    confidence: high
+    how: "(*Player).Draw(c *render.Canvas) (стр. 33) — получатель-указатель: реализует только *Player."
+  - rel: implement
+    expect: must
+    from: {file: render/sprite.go, line: 4, symbol: render.Sprite}
+    confidence: high
+    how: "Sprite.Draw(c *Canvas) (стр. 10) — получатель-значение: реализуют и Sprite, и *Sprite."
+  - rel: implement
+    expect: must
+    from: {file: ui/tooltip.go, line: 7, symbol: ui.Tooltip}
+    confidence: high
+    how: "(*Tooltip).Draw(c *r.Canvas) (стр. 13); r — алиас импорта render. Реализует по набору методов, хотя нигде не приводится к Drawer (main.go:44 — прямой вызов)."
+  - rel: inherit
+    expect: must
+    from: {file: game/world.go, line: 15, symbol: game.Actor}
+    confidence: high
+    how: "Интерфейс Actor встраивает render.Drawer."
+  # --- ловушки ---
+  - rel: implement
+    expect: must_not
+    from: {file: ui/button.go, line: 6, symbol: ui.Button}
+    confidence: high
+    how: "Button.Draw(c *r.Canvas, highlighted bool) — лишний параметр."
+  - rel: implement
+    expect: must_not
+    from: {file: ui/button.go, line: 20, symbol: ui.ghost}
+    confidence: high
+    how: "ghost.draw — со строчной буквы, другой метод."
+  - rel: implement
+    expect: must_not
+    from: {file: render/canvas.go, line: 12, symbol: render.Canvas}
+    confidence: high
+    how: "У Canvas есть DrawAll и Put, но не Draw."
+notes: >
+  Проверяет получатели значение/указатель, алиас импорта (r.Canvas ≡ render.Canvas при сравнении типов параметров)
+  и встраивание интерфейсов из другого пакета. Для game.Actor строка — строка встраивания (world.go:15).
+---
+schema: 1
+id: go-arena-04-drawall-callees
+project: fixture-go-arena
+languages: [go]
+kind: callees
+trap: true
+question: >
+  Какие методы Draw может вызвать render.(*Canvas).DrawAll в строке it.Draw(c)?
+target:
+  file: render/canvas.go
+  symbol: render.(*Canvas).DrawAll
+  line: 22
+direction: outgoing
+match: line
+line_tolerance: 0
+edges:
+  - rel: call_interface
+    expect: must
+    to: {file: render/canvas.go, line: 8, symbol: render.Drawer.Draw}
+    confidence: high
+    how: "it — render.Drawer; статическая цель вызова (стр. 24)."
+  - rel: call_interface
+    expect: must
+    to: {file: entity/player.go, line: 33, symbol: entity.(*Player).Draw}
+    confidence: high
+    how: "*Player попадает в срез через World.Add → e.(Actor) → drawers (world.go:52, 66, 68)."
+  - rel: call_interface
+    expect: must
+    to: {file: render/sprite.go, line: 10, symbol: render.Sprite.Draw}
+    confidence: high
+    how: "main.go:47: DrawAll([]render.Drawer{render.Sprite{…}})."
+  - rel: call_interface
+    expect: may
+    to: {file: ui/tooltip.go, line: 13, symbol: ui.(*Tooltip).Draw}
+    confidence: high
+    how: "*Tooltip реализует Drawer, но никогда не приводится к нему: консервативный анализ (все реализации) даст связь, анализ по фактическим преобразованиям — нет. Оба ответа допустимы."
+  # --- ловушки ---
+  - rel: call_interface
+    expect: must_not
+    to: {file: ui/button.go, line: 11, symbol: ui.Button.Draw}
+    confidence: high
+    how: "Button не реализует Drawer (два параметра)."
+  - rel: call_interface
+    expect: must_not
+    to: {file: ui/button.go, line: 22, symbol: ui.ghost.draw}
+    confidence: high
+    how: "Другое имя метода (draw)."
+notes: >
+  Тип «реализует интерфейс, но нигде через него не используется» — ui.Tooltip: implement — must (эталон 03),
+  вызов через интерфейс — may.
+---
+schema: 1
+id: go-arena-05-entity-update-dispatch
+project: fixture-go-arena
+languages: [go]
+kind: implementations
+trap: true
+question: >
+  Кто реализует метод интерфейса entity.Entity.Update и откуда он вызывается? У ui.HUD есть одноимённый метод.
+target:
+  file: entity/entity.go
+  symbol: entity.Entity.Update
+  line: 14
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call_interface
+    expect: must
+    from: {file: game/world.go, line: 62, symbol: game.(*World).Tick}
+    confidence: high
+    how: "e.Update(dt), e — элемент []entity.Entity."
+  - rel: override
+    expect: must
+    from: {file: entity/player.go, line: 22, symbol: entity.(*Player).Update}
+    confidence: high
+    how: "*Player реализует Entity (неявно)."
+  - rel: override
+    expect: must
+    from: {file: entity/monster.go, line: 19, symbol: entity.(*Monster).Update}
+    confidence: high
+    how: "*Monster реализует Entity (ID через *Base)."
+  - rel: override
+    expect: must
+    from: {file: game/world_test.go, line: 16, symbol: game_test.(*fakeEntity).Update}
+    confidence: high
+    how: "Подделка из теста."
+  - rel: test
+    expect: may
+    from: {file: game/world_test.go, line: 22, symbol: game_test.TestTickUpdatesEntities}
+    confidence: high
+    how: "w.Tick(0.1) → e.Update (транзитивно)."
+  # --- ловушки ---
+  - rel: override
+    expect: must_not
+    from: {file: ui/hud.go, line: 16, symbol: ui.(*HUD).Update}
+    confidence: high
+    how: "HUD не реализует Entity (нет ID)."
+  - rel: call
+    expect: must_not
+    from: {file: cmd/arena/main.go, line: 42, symbol: main.main}
+    confidence: high
+    how: "hud.Update(0.016) — прямой вызов (*HUD).Update."
+---
+schema: 1
+id: go-arena-06-vec-add-trap
+project: fixture-go-arena
+languages: [go]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает geom.Vec.Add? В проекте ещё есть game.(*World).Add и game.(*Score).Add.
+target:
+  file: geom/vec.go
+  symbol: geom.Vec.Add
+  line: 12
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: entity/entity.go, line: 30, symbol: entity.(*Base).Move}
+    confidence: high
+    how: "b.Pos.Add(d) — поле Pos geom.Vec (стр. 20); метод с получателем-значением."
+  - rel: test
+    expect: must
+    from: {file: geom/vec_test.go, line: 6, symbol: geom.TestAdd}
+    confidence: high
+    how: "Vec{…}.Add(…) — внутренний тест того же пакета."
+  - rel: call
+    expect: may
+    from: {file: entity/player.go, line: 23, symbol: entity.(*Player).Update}
+    confidence: high
+    how: "p.Move(...) → (*Base).Move → Vec.Add (транзитивно)."
+  # --- ловушки: другие Add ---
+  - rel: call
+    expect: must_not
+    from: {file: cmd/arena/main.go, line: 19, symbol: main.main}
+    confidence: high
+    how: "w.Add(player) — (*World).Add."
+  - rel: call
+    expect: must_not
+    from: {file: game/world.go, line: 84, symbol: game.(*World).spawnLoop}
+    confidence: high
+    how: "w.Add(...) — (*World).Add."
+  - rel: test
+    expect: must_not
+    from: {file: game/world_test.go, line: 21, symbol: game_test.TestTickUpdatesEntities}
+    confidence: high
+    how: "w.Add(f) — (*World).Add."
+  - rel: call
+    expect: must_not
+    from: {file: game/score.go, line: 23, symbol: game.(*Score).OnMonsterKilled}
+    confidence: high
+    how: "s.Add(10) — (*Score).Add."
+---
+schema: 1
+id: go-arena-07-base-move-promoted
+project: fixture-go-arena
+languages: [go]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает entity.(*Base).Move (в том числе как продвинутый через встраивание метод)?
+target:
+  file: entity/entity.go
+  symbol: entity.(*Base).Move
+  line: 29
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: entity/player.go, line: 23, symbol: entity.(*Player).Update}
+    confidence: high
+    how: "p.Move(...) — у Player нет своего Move; метод продвинут из встроенного Base."
+  - rel: call
+    expect: must
+    from: {file: entity/monster.go, line: 20, symbol: entity.(*Monster).Update}
+    confidence: high
+    how: "m.Move(...) — продвинут из встроенного *Base."
+  # --- ловушка ---
+  - rel: call
+    expect: must_not
+    from: {file: cmd/arena/main.go, line: 43, symbol: main.main}
+    confidence: high
+    how: "tip.Move(1, 0) — (*ui.Tooltip).Move."
+---
+schema: 1
+id: go-arena-08-vec-scale-pointer-receiver
+project: fixture-go-arena
+languages: [go]
+kind: consumers
+trap: false
+question: >
+  Кто вызывает geom.(*Vec).Scale (получатель-указатель)?
+target:
+  file: geom/vec.go
+  symbol: geom.(*Vec).Scale
+  line: 17
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: entity/player.go, line: 24, symbol: entity.(*Player).Update}
+    confidence: high
+    how: "p.Vel.Scale(0.9) — поле-значение Vel адресуемо, компилятор берёт &p.Vel."
+  - rel: test
+    expect: must
+    from: {file: geom/vec_test.go, line: 14, symbol: geom.TestScale}
+    confidence: high
+    how: "v.Scale(2) на локальной переменной-значении."
+---
+schema: 1
+id: go-arena-09-score-callback-trap
+project: fixture-go-arena
+languages: [go]
+kind: consumers
+trap: true
+question: >
+  Откуда вызывается game.(*Score).OnMonsterKilled? В пакете ui есть одноимённая функция ui.OnMonsterKilled,
+  подписанная на то же событие.
+target:
+  file: game/score.go
+  symbol: game.(*Score).OnMonsterKilled
+  line: 22
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: callback_register
+    expect: must
+    from: {file: game/world.go, line: 42, symbol: game.NewWorld}
+    confidence: high
+    how: "w.Bus.Subscribe(events.TopicKilled, w.score.OnMonsterKilled) — значение-метод (method value)."
+  - rel: callback_invoke
+    expect: may
+    from: {file: events/bus.go, line: 37, symbol: events.(*Bus).Publish}
+    confidence: high
+    how: "h(Event{…}) — вызов через срез обработчиков в map; связь с конкретной функцией — только через поток данных."
+  - rel: event_emit
+    expect: may
+    from: {file: game/world.go, line: 73, symbol: game.(*World).Kill}
+    confidence: high
+    how: "w.Bus.Publish(events.TopicKilled, …) — источник события."
+  # --- ловушки ---
+  - rel: callback_register
+    expect: must_not
+    from: {file: cmd/arena/main.go, line: 33, symbol: main.main}
+    confidence: high
+    how: "Subscribe(events.TopicKilled, ui.OnMonsterKilled) — функция пакета ui."
+  - rel: reference
+    expect: must_not
+    from: {file: ui/hud.go, line: 26, symbol: ui.OnMonsterKilled}
+    confidence: high
+    how: "Одноимённая функция другого пакета."
+  - rel: callback_register
+    expect: must_not
+    from: {file: cmd/arena/main.go, line: 34, symbol: main.main}
+    confidence: high
+    how: "Анонимная функция на другом топике."
+---
+schema: 1
+id: go-arena-10-goroutine-spawnloop
+project: fixture-go-arena
+languages: [go]
+kind: consumers
+trap: false
+question: >
+  Кто запускает game.(*World).spawnLoop?
+target:
+  file: game/world.go
+  symbol: game.(*World).spawnLoop
+  line: 82
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: game/world.go, line: 79, symbol: game.(*World).StartSpawner}
+    confidence: high
+    how: "go w.spawnLoop(requests) — вызов в горутине (ADR-006: calls с props.async)."
+  - rel: call
+    expect: may
+    from: {file: cmd/arena/main.go, line: 25, symbol: main.main}
+    confidence: high
+    how: "w.StartSpawner(requests) — транзитивно. Данные приходят из анонимной горутины main.go:26–31 через канал — каналы не рёбра."
+notes: >
+  Второй случай горутины — go w.runJobs() (world.go:43, game.NewWorld) — в эталоне 11 как may-звено.
+---
+schema: 1
+id: go-arena-11-func-through-channel
+project: fixture-go-arena
+languages: [go]
+kind: consumers
+trap: false
+question: >
+  Где используется и откуда вызывается game.(*World).saveSnapshot?
+target:
+  file: game/world.go
+  symbol: game.(*World).saveSnapshot
+  line: 99
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: callback_register
+    expect: must
+    from: {file: game/world.go, line: 74, symbol: game.(*World).Kill}
+    confidence: high
+    how: "w.Enqueue(w.saveSnapshot) — значение-метод; Enqueue отправляет его в канал jobs chan func()."
+  - rel: callback_invoke
+    expect: may
+    from: {file: game/world.go, line: 95, symbol: game.(*World).runJobs}
+    confidence: high
+    how: "job() — функция, прочитанная из канала; runJobs запущен горутиной в NewWorld (стр. 43)."
+  - rel: call
+    expect: may
+    from: {file: game/world.go, line: 43, symbol: game.NewWorld}
+    confidence: high
+    how: "go w.runJobs() — звено цепочки."
+---
+schema: 1
+id: go-arena-12-world-tick-tests
+project: fixture-go-arena
+languages: [go]
+kind: consumers
+trap: false
+question: >
+  Кто вызывает game.(*World).Tick и какие тесты его проверяют?
+target:
+  file: game/world.go
+  symbol: game.(*World).Tick
+  line: 58
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: cmd/arena/main.go, line: 41, symbol: main.main}
+    confidence: high
+    how: "w := game.NewWorld() — тип из возвращаемого типа *World."
+  - rel: test
+    expect: must
+    from: {file: game/world_test.go, line: 22, symbol: game_test.TestTickUpdatesEntities}
+    confidence: high
+    how: "Внешний тестовый пакет game_test (ключ ADR-006 — с суффиксом _test)."
+---
+schema: 1
+id: go-arena-13-render-package-imports
+project: fixture-go-arena
+languages: [go]
+kind: consumers
+trap: false
+question: >
+  Какие файлы импортируют пакет example.com/arena/render (в том числе под алиасом)?
+target:
+  file: render/canvas.go
+  symbol: example.com/arena/render
+  line: 2
+direction: incoming
+match: file
+edges:
+  - rel: import
+    expect: must
+    from: {file: entity/player.go, line: 5}
+    confidence: high
+    how: "Импорт в группе."
+  - rel: import
+    expect: must
+    from: {file: ui/tooltip.go, line: 4}
+    confidence: high
+    how: "Алиас r."
+  - rel: import
+    expect: must
+    from: {file: ui/button.go, line: 3}
+    confidence: high
+    how: "Алиас r."
+  - rel: import
+    expect: must
+    from: {file: game/world.go, line: 9}
+    confidence: high
+    how: "Импорт в группе."
+  - rel: import
+    expect: must
+    from: {file: cmd/arena/main.go, line: 11}
+    confidence: high
+    how: "Импорт в группе."
+notes: >
+  Пакет объявлен в двух файлах (canvas.go, sprite.go) — один узел; target указывает на первый. Путь импорта =
+  module из go.mod + папка.

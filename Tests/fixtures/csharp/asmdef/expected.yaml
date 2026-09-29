@@ -1,0 +1,305 @@
+# Ожидаемый граф синтетической базы Tests/fixtures/csharp/asmdef (F02-03): видимость сборок Unity.
+# Формат — Bench/README.md, «Формат эталона»; один YAML-документ (---) = один эталон.
+# Пути — от корня базы (папка этого файла). Строки проверены скриптом при составлении.
+# Сборки: Game.Core (Assets/Core), Game.Gameplay → Core по имени, Game.UI → Core по GUID,
+# Game.Tools → Core (autoReferenced: false), Assembly-CSharp (Assets/Scripts), Assembly-CSharp-Editor
+# (Assets/Scripts/Editor), Assembly-CSharp-firstpass (Assets/Plugins), Game.Core.Tests (EditMode).
+---
+schema: 1
+id: cs-asm-01-gameplay-settings-load
+project: fixture-csharp-asmdef
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Game.Shared.Settings.Load из сборки Game.Gameplay (Assets/Gameplay/Settings.cs)?
+target:
+  file: Assets/Gameplay/Settings.cs
+  symbol: "Settings.Load"
+  line: 7
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Assets/Scripts/GameBootstrap.cs, line: 13, symbol: "GameBootstrap.Run"}
+    confidence: high
+    how: "Assembly-CSharp (скрипт без asmdef) видит все сборки с autoReferenced: true — Game.Gameplay да, Game.Tools нет; Settings через using Game.Shared."
+  - rel: call
+    expect: must_not
+    from: {file: Assets/Tools/SettingsTool.cs, line: 11, symbol: "SettingsTool.Apply"}
+    confidence: high
+    how: "Game.Tools не ссылается на Game.Gameplay; там Settings — свой класс Assets/Tools/Settings.cs с тем же полным именем."
+notes: >
+  Два класса с одинаковым полным именем Game.Shared.Settings в разных сборках; различает их только видимость
+  сборок (ADR-006 §8.2).
+---
+schema: 1
+id: cs-asm-02-tools-settings-load
+project: fixture-csharp-asmdef
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Game.Shared.Settings.Load из сборки Game.Tools (Assets/Tools/Settings.cs)?
+target:
+  file: Assets/Tools/Settings.cs
+  symbol: "Settings.Load"
+  line: 6
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Assets/Tools/SettingsTool.cs, line: 11, symbol: "SettingsTool.Apply"}
+    confidence: high
+    how: "Вызов внутри той же сборки Game.Tools."
+  - rel: call
+    expect: must_not
+    from: {file: Assets/Scripts/GameBootstrap.cs, line: 13, symbol: "GameBootstrap.Run"}
+    confidence: high
+    how: "Game.Tools — autoReferenced: false, Assembly-CSharp его не видит."
+---
+schema: 1
+id: cs-asm-03-core-log-info
+project: fixture-csharp-asmdef
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Game.Core.Log.Info?
+target:
+  file: Assets/Core/Log.cs
+  symbol: "Log.Info"
+  line: 7
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Assets/Gameplay/Weapon.cs, line: 10, symbol: "Weapon.Fire"}
+    confidence: high
+    how: "Game.Gameplay ссылается на Game.Core по имени; using Game.Core."
+  - rel: call
+    expect: must
+    from: {file: Assets/Scripts/GameBootstrap.cs, line: 14, symbol: "GameBootstrap.Run"}
+    confidence: high
+    how: "Assembly-CSharp видит Game.Core (autoReferenced)."
+  - rel: call
+    expect: must
+    from: {file: Assets/Scripts/Editor/BuildMenu.cs, line: 14, symbol: "BuildMenu.Build"}
+    confidence: high
+    how: "Assembly-CSharp-Editor (папка Editor без asmdef) видит Game.Core."
+  - rel: call
+    expect: must
+    from: {file: Assets/Tools/SettingsTool.cs, line: 12, symbol: "SettingsTool.Apply"}
+    confidence: high
+    how: "Game.Tools ссылается на Game.Core."
+  - rel: call
+    expect: must
+    from: {file: Assets/Tests/EditMode/StatsTests.cs, line: 16, symbol: "StatsTests.Info_DoesNotThrow"}
+    confidence: high
+    how: "Тест в сборке Game.Core.Tests; вызов внутри лямбды относится к методу теста."
+  - rel: call
+    expect: must_not
+    from: {file: Assets/UI/HudPresenter.cs, line: 11, symbol: "HudPresenter.Show"}
+    confidence: high
+    how: "В пространстве имён Game.UI свой internal-класс Log: член объемлющего пространства имён находится раньше, чем using Game.Core."
+---
+schema: 1
+id: cs-asm-04-ui-log-info
+project: fixture-csharp-asmdef
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Game.UI.Log.Info?
+target:
+  file: Assets/UI/Log.cs
+  symbol: "Log.Info"
+  line: 8
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Assets/UI/HudPresenter.cs, line: 11, symbol: "HudPresenter.Show"}
+    confidence: high
+    how: "HudPresenter в namespace Game.UI: Log — тип того же пространства имён."
+  - rel: call
+    expect: must_not
+    from: {file: Assets/Gameplay/Weapon.cs, line: 10, symbol: "Weapon.Fire"}
+    confidence: high
+    how: "Game.Gameplay не видит Game.UI; это Game.Core.Log."
+  - rel: call
+    expect: must_not
+    from: {file: Assets/Scripts/GameBootstrap.cs, line: 14, symbol: "GameBootstrap.Run"}
+    confidence: high
+    how: "Game.UI.Log — internal и не импортирован; это Game.Core.Log."
+---
+schema: 1
+id: cs-asm-05-firstpass-tween
+project: fixture-csharp-asmdef
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает глобальный Tween.To из Assets/Plugins (Assembly-CSharp-firstpass)?
+target:
+  file: Assets/Plugins/Tween.cs
+  symbol: "Tween.To"
+  line: 6
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Assets/Scripts/GameBootstrap.cs, line: 17, symbol: "GameBootstrap.Run"}
+    confidence: high
+    how: "Assembly-CSharp видит firstpass; тип глобального пространства имён находится раньше типов из using Game.Gameplay (где есть Game.Gameplay.Tween)."
+  - rel: call
+    expect: must_not
+    from: {file: Assets/Gameplay/Weapon.cs, line: 12, symbol: "Weapon.Fire"}
+    confidence: high
+    how: "Сборки asmdef не видят Assembly-CSharp-firstpass; это Game.Gameplay.Tween."
+---
+schema: 1
+id: cs-asm-06-gameplay-tween
+project: fixture-csharp-asmdef
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Game.Gameplay.Tween.To?
+target:
+  file: Assets/Gameplay/Tween.cs
+  symbol: "Tween.To"
+  line: 8
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Assets/Gameplay/Weapon.cs, line: 12, symbol: "Weapon.Fire"}
+    confidence: high
+    how: "Weapon в namespace Game.Gameplay; firstpass недоступен сборке asmdef."
+  - rel: call
+    expect: must_not
+    from: {file: Assets/Scripts/GameBootstrap.cs, line: 17, symbol: "GameBootstrap.Run"}
+    confidence: high
+    how: "В GameBootstrap имя Tween находит глобальный тип из firstpass."
+---
+schema: 1
+id: cs-asm-07-core-asmdef-dependents
+project: fixture-csharp-asmdef
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Какие сборки зависят от Game.Core (ссылаются на Game.Core.asmdef)?
+target:
+  file: Assets/Core/Game.Core.asmdef
+  symbol: "Game.Core"
+  line: 2
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: import
+    expect: must
+    from: {file: Assets/Gameplay/Game.Gameplay.asmdef, line: 5, symbol: "Game.Gameplay"}
+    confidence: high
+    how: "references: \"Game.Core\" — по имени."
+  - rel: import
+    expect: must
+    from: {file: Assets/UI/Game.UI.asmdef, line: 5, symbol: "Game.UI"}
+    confidence: high
+    how: "references: \"GUID:fe44…\" — по GUID из Game.Core.asmdef.meta; имени Game.Core в файле нет."
+  - rel: import
+    expect: must
+    from: {file: Assets/Tools/Game.Tools.asmdef, line: 5, symbol: "Game.Tools"}
+    confidence: high
+    how: "references: \"Game.Core\"; сборка с autoReferenced: false сама на Core ссылаться может."
+  - rel: import
+    expect: must
+    from: {file: Assets/Tests/EditMode/Game.Core.Tests.asmdef, line: 7, symbol: "Game.Core.Tests"}
+    confidence: high
+    how: "Тестовая сборка ссылается на Game.Core."
+  - rel: import
+    expect: must_not
+    from: {file: Assets/Tests/EditMode/Game.Core.Tests.asmdef, line: 2, symbol: "Game.Core.Tests"}
+    confidence: high
+    how: "\"name\": \"Game.Core.Tests\" — совпадение префикса имени, а не ссылка."
+notes: >
+  Связь сборка → сборка (ADR-006: depends_on) в словаре Bench/README.md записана как import. Assembly-CSharp и
+  Assembly-CSharp-Editor тоже зависят от Game.Core (неявно, через autoReferenced: true), но строки-ссылки у них
+  нет, поэтому в эталон с match: line они не входят.
+---
+schema: 1
+id: cs-asm-08-core-stats-add-tests
+project: fixture-csharp-asmdef
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Game.Core.Stats.Add и какие тесты его проверяют?
+target:
+  file: Assets/Core/Stats.cs
+  symbol: "Stats.Add"
+  line: 5
+direction: incoming
+match: symbol
+edges:
+  - rel: test
+    expect: must
+    from: {file: Assets/Tests/EditMode/StatsTests.cs, line: 10, symbol: "StatsTests.Add_ReturnsSum"}
+    confidence: high
+    how: "[Test] Add_ReturnsSum вызывает Stats.Add; Stats — тип объемлющего пространства имён Game.Core."
+  - rel: call
+    expect: must
+    from: {file: Assets/Gameplay/Weapon.cs, line: 13, symbol: "Weapon.Fire"}
+    confidence: high
+    how: "Stats.Add(1, 2)."
+  - rel: call
+    expect: must
+    from: {file: Assets/UI/HudPresenter.cs, line: 12, symbol: "HudPresenter.Show"}
+    confidence: high
+    how: "Stats.Add(2, 3) из Game.UI (ссылка на Core по GUID)."
+  - rel: test
+    expect: must_not
+    from: {file: Assets/Tests/EditMode/StatsTests.cs, line: 14, symbol: "StatsTests.Info_DoesNotThrow"}
+    confidence: high
+    how: "Соседний тест Info_DoesNotThrow проверяет Log.Info, а не Stats.Add."
+---
+schema: 1
+id: cs-asm-09-bootstrap-run-from-editor
+project: fixture-csharp-asmdef
+languages: [csharp]
+kind: consumers
+trap: false
+question: >
+  Кто вызывает GameBootstrap.Run?
+target:
+  file: Assets/Scripts/GameBootstrap.cs
+  symbol: "GameBootstrap.Run"
+  line: 10
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Assets/Scripts/Editor/BuildMenu.cs, line: 13, symbol: "BuildMenu.Build"}
+    confidence: high
+    how: "Assembly-CSharp-Editor видит Assembly-CSharp."
+  - rel: call
+    expect: must
+    from: {file: Assets/Scripts/GameBootstrap.cs, line: 23, symbol: "GameBootstrap.Awake"}
+    confidence: high
+    how: "Run() из сообщения Awake того же класса."

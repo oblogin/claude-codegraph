@@ -1,0 +1,808 @@
+# Ожидаемый граф синтетической базы Tests/fixtures/ts/browser-game (F02-03).
+# Формат — Bench/README.md («Формат эталона»); один YAML-документ (между `---`) = один эталон.
+# Пути — от корня базы (папка этого файла), строки — с 1; line_tolerance: 0 — строки в синтетике точные,
+# а соседние строки часто принадлежат разным записям (must рядом с must_not). confidence у синтетики всегда high.
+# Символы TS: `Class.method`, свободная функция — `имя` (модуль различается по file).
+---
+schema: 1
+id: ts-browser-game-01-util-format-trap
+project: fixture-ts-browser-game
+languages: [ts, js]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает функцию format из src/util/format.ts (формат счёта с разделителем тысяч)? В src/game/ui/format.ts
+  есть одноимённая функция format (формат времени) — она другая.
+target:
+  file: src/util/format.ts
+  symbol: format
+  line: 1
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/game/scoring.ts, line: 8, symbol: scoreLabel}
+    confidence: high
+    how: "import { format } from \"@util\" (стр. 1): paths @util → src/util/index.ts (из tsconfig.base.json через extends) → export { format } from \"./format\"."
+  - rel: call
+    expect: must
+    from: {file: src/util/debug.js, line: 6, symbol: logScore}
+    confidence: high
+    how: "JS-файл импортирует TS-модуль без расширения: import { format } from \"./format\" (стр. 2) → src/util/format.ts."
+  - rel: import
+    expect: may
+    from: {file: src/util/index.ts, line: 1}
+    confidence: high
+    how: "Реэкспорт export { format } from \"./format\" — звено цепочки, не вызов."
+  - rel: import
+    expect: may
+    from: {file: src/game/scoring.ts, line: 1}
+    confidence: high
+    how: "Импорт символа через алиас @util и реэкспорт."
+  - rel: import
+    expect: may
+    from: {file: src/util/debug.js, line: 2}
+    confidence: high
+    how: "Импорт из JS."
+  - rel: test
+    expect: may
+    from: {file: tests/scoring.test.ts, line: 10}
+    confidence: high
+    how: "Тест scoreLabel проверяет результат format(\"Score: 12 345\") — транзитивно через scoreLabel."
+  # --- ловушки: одноимённая функция в src/game/ui/format.ts ---
+  - rel: call
+    expect: must_not
+    from: {file: src/game/ui/hud.ts, line: 16, symbol: Hud.draw}
+    confidence: high
+    how: "format(this.elapsed) — импорт из \"./format\" (стр. 1) = src/game/ui/format.ts."
+  - rel: import
+    expect: must_not
+    from: {file: src/game/ui/hud.ts, line: 1}
+    confidence: high
+    how: "Импорт другого модуля format."
+  - rel: reference
+    expect: must_not
+    from: {file: src/game/ui/format.ts, line: 1, symbol: format}
+    confidence: high
+    how: "Объявление одноимённой функции в другом модуле."
+notes: >
+  Проверяет: алиас tsconfig paths без звёздочки (@util), реэкспорт export { a } from, импорт TS из JS без расширения.
+  grep «format(» находит обе функции и их вызовы.
+---
+schema: 1
+id: ts-browser-game-02-clamp-renamed-reexport
+project: fixture-ts-browser-game
+languages: [ts]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает clamp из src/engine/math/scalar.ts? Снаружи модуль реэкспортирует её под именем clampValue;
+  в src/game/ui/hud.ts есть своя локальная функция clamp.
+target:
+  file: src/engine/math/scalar.ts
+  symbol: clamp
+  line: 1
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/game/actors/player.ts, line: 24, symbol: Player.onUpdate}
+    confidence: high
+    how: "clampValue из \"@engine/math\" (стр. 2): paths @engine/* → src/engine/math → index.ts → export { clamp as clampValue } from \"./scalar\"."
+  - rel: call
+    expect: must
+    from: {file: src/game/actors/enemy.ts, line: 10, symbol: Enemy.onUpdate}
+    confidence: high
+    how: "math.clampValue(...) — импорт пространства имён import * as math from \"@engine/math\" (стр. 1), ns.x как путь."
+  - rel: import
+    expect: may
+    from: {file: src/engine/math/index.ts, line: 2}
+    confidence: high
+    how: "Реэкспорт с переименованием export { clamp as clampValue }."
+  - rel: import
+    expect: may
+    from: {file: src/game/actors/player.ts, line: 2}
+    confidence: high
+    how: "Импорт clampValue."
+  - rel: import
+    expect: may
+    from: {file: src/game/actors/enemy.ts, line: 1}
+    confidence: high
+    how: "Импорт пространства имён модуля math."
+  # --- ловушки ---
+  - rel: call
+    expect: must_not
+    from: {file: src/game/ui/hud.ts, line: 16, symbol: Hud.draw}
+    confidence: high
+    how: "clamp(label, 24) — локальная функция модуля hud.ts (стр. 3), не импорт."
+  - rel: reference
+    expect: must_not
+    from: {file: src/game/ui/hud.ts, line: 3, symbol: clamp}
+    confidence: high
+    how: "Объявление одноимённой локальной функции."
+notes: >
+  Имя в месте вызова (clampValue) не совпадает с именем объявления (clamp): связь видна только через таблицу
+  экспорта модуля с переименованием. grep «clamp» находит ровно ловушки и пропускает clampValue.
+---
+schema: 1
+id: ts-browser-game-03-entity-onupdate-overrides
+project: fixture-ts-browser-game
+languages: [ts]
+kind: implementations
+trap: true
+question: >
+  Кто переопределяет абстрактный Entity.onUpdate и откуда он вызывается? У класса Hud есть одноимённый метод
+  onUpdate, но Hud не наследует Entity.
+target:
+  file: src/engine/entity.ts
+  symbol: Entity.onUpdate
+  line: 14
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call_virtual
+    expect: must
+    from: {file: src/engine/entity.ts, line: 11, symbol: Entity.update}
+    confidence: high
+    how: "this.onUpdate(dt) — вызов абстрактного метода; реально попадает в переопределения ниже."
+  - rel: override
+    expect: must
+    from: {file: src/game/actors/actor.ts, line: 12, symbol: Actor.onUpdate}
+    confidence: high
+    how: "class Actor extends Entity (стр. 3); реализует абстрактный метод."
+  - rel: override
+    expect: must
+    from: {file: src/game/actors/player.ts, line: 22, symbol: Player.onUpdate}
+    confidence: high
+    how: "Player extends Actor extends Entity; protected override onUpdate."
+  - rel: override
+    expect: must
+    from: {file: src/game/actors/enemy.ts, line: 8, symbol: Enemy.onUpdate}
+    confidence: high
+    how: "Enemy extends Actor extends Entity; protected override onUpdate."
+  # --- непрямые звенья ---
+  - rel: call
+    expect: may
+    from: {file: src/game/actors/player.ts, line: 23, symbol: Player.onUpdate}
+    confidence: high
+    how: "super.onUpdate(dt) — вызов Actor.onUpdate (переопределения target), не самого target."
+  - rel: call
+    expect: may
+    from: {file: src/game/actors/enemy.ts, line: 11, symbol: Enemy.onUpdate}
+    confidence: high
+    how: "super.onUpdate(dt) → Actor.onUpdate."
+  - rel: call
+    expect: may
+    from: {file: src/game/game.ts, line: 52, symbol: Game.tick}
+    confidence: high
+    how: "this.player.update(dt) → Entity.update → this.onUpdate (транзитивно)."
+  - rel: call
+    expect: may
+    from: {file: src/game/game.ts, line: 54, symbol: Game.tick}
+    confidence: high
+    how: "enemy.update(dt) → Entity.update → this.onUpdate (транзитивно)."
+  - rel: test
+    expect: may
+    from: {file: tests/player.test.ts, line: 18}
+    confidence: high
+    how: "player.update(0.5) → Entity.update → Player.onUpdate (транзитивно)."
+  # --- ловушки: Hud.onUpdate ---
+  - rel: override
+    expect: must_not
+    from: {file: src/game/ui/hud.ts, line: 11, symbol: Hud.onUpdate}
+    confidence: high
+    how: "class Hud (стр. 7) без extends/implements — одноимённый метод, не переопределение."
+  - rel: call
+    expect: must_not
+    from: {file: src/game/game.ts, line: 56, symbol: Game.tick}
+    confidence: high
+    how: "this.hud.onUpdate(dt) — поле hud = new Hud() (стр. 21)."
+  - rel: test
+    expect: must_not
+    from: {file: tests/player.test.ts, line: 26}
+    confidence: high
+    how: "hud.onUpdate(61) — тест Hud."
+notes: >
+  Абстрактный метод и виртуальный вызов через this; переопределения на двух уровнях иерархии. Ловушка — класс
+  вне иерархии с тем же именем метода.
+---
+schema: 1
+id: ts-browser-game-04-drawable-implementations
+project: fixture-ts-browser-game
+languages: [ts]
+kind: implementations
+trap: true
+question: >
+  Какие классы реализуют интерфейс Drawable?
+target:
+  file: src/engine/interfaces.ts
+  symbol: Drawable
+  line: 6
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: implement
+    expect: must
+    from: {file: src/game/actors/actor.ts, line: 3, symbol: Actor}
+    confidence: high
+    how: "class Actor extends Entity implements Drawable; Drawable импортирован из \"@engine\" (paths → src/engine/index.ts → export * from \"./interfaces\")."
+  - rel: implement
+    expect: may
+    from: {file: src/game/actors/player.ts, line: 7, symbol: Player}
+    confidence: high
+    how: "Реализует через базовый класс Actor (транзитивно)."
+  - rel: implement
+    expect: may
+    from: {file: src/game/actors/enemy.ts, line: 5, symbol: Enemy}
+    confidence: high
+    how: "Реализует через базовый класс Actor (транзитивно)."
+  - rel: reference
+    expect: may
+    from: {file: src/engine/renderer.ts, line: 6, symbol: Renderer.drawAll}
+    confidence: high
+    how: "Тип параметра items: Drawable[]."
+  - rel: reference
+    expect: may
+    from: {file: src/game/game.ts, line: 57, symbol: Game.tick}
+    confidence: high
+    how: "Тип локальной drawables: Drawable[]."
+  # --- ловушка ---
+  - rel: implement
+    expect: must_not
+    from: {file: src/game/ui/hud.ts, line: 7, symbol: Hud}
+    confidence: high
+    how: "У Hud есть метод draw, но с другой сигнатурой draw(label: string); Hud не объявляет implements и нигде не приводится к Drawable."
+notes: >
+  Структурная типизация TS: объект с совместимым draw(ctx: RenderContext) тоже годился бы как Drawable; здесь
+  таких нет. Неявные структурные реализации в ожидаемый граф не входят.
+---
+schema: 1
+id: ts-browser-game-05-drawall-callees
+project: fixture-ts-browser-game
+languages: [ts]
+kind: callees
+trap: true
+question: >
+  Какие методы draw реально может вызвать Renderer.drawAll в строке item.draw(this.ctx)?
+target:
+  file: src/engine/renderer.ts
+  symbol: Renderer.drawAll
+  line: 6
+direction: outgoing
+match: line
+line_tolerance: 0
+edges:
+  - rel: call_interface
+    expect: must
+    to: {file: src/engine/interfaces.ts, line: 7, symbol: Drawable.draw}
+    confidence: high
+    how: "item: Drawable — статическая цель вызова (стр. 9 renderer.ts)."
+  - rel: call_interface
+    expect: must
+    to: {file: src/game/actors/actor.ts, line: 16, symbol: Actor.draw}
+    confidence: high
+    how: "Actor implements Drawable; Enemy наследует Actor.draw без переопределения."
+  - rel: call_interface
+    expect: must
+    to: {file: src/game/actors/player.ts, line: 27, symbol: Player.draw}
+    confidence: high
+    how: "Player extends Actor, override draw."
+  # --- ловушка ---
+  - rel: call_interface
+    expect: must_not
+    to: {file: src/game/ui/hud.ts, line: 15, symbol: Hud.draw}
+    confidence: high
+    how: "Hud не Drawable; Hud.draw вызывается только напрямую из Game.tick (game.ts:59)."
+notes: >
+  Outgoing-запрос: куда уходит вызов через интерфейс. Реализации находятся через implements + override по имени.
+---
+schema: 1
+id: ts-browser-game-06-entity-inherit
+project: fixture-ts-browser-game
+languages: [ts]
+kind: implementations
+trap: true
+question: >
+  Какие классы наследуют Entity?
+target:
+  file: src/engine/entity.ts
+  symbol: Entity
+  line: 1
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: inherit
+    expect: must
+    from: {file: src/game/actors/actor.ts, line: 3, symbol: Actor}
+    confidence: high
+    how: "class Actor extends Entity; Entity импортирован из \"@engine\" → src/engine/index.ts → export * from \"./entity\"."
+  - rel: inherit
+    expect: may
+    from: {file: src/game/actors/player.ts, line: 7, symbol: Player}
+    confidence: high
+    how: "Транзитивно через Actor."
+  - rel: inherit
+    expect: may
+    from: {file: src/game/actors/enemy.ts, line: 5, symbol: Enemy}
+    confidence: high
+    how: "Транзитивно через Actor."
+  - rel: import
+    expect: may
+    from: {file: src/game/actors/actor.ts, line: 1}
+    confidence: high
+    how: "Импорт через алиас и export *."
+  # --- ловушка ---
+  - rel: inherit
+    expect: must_not
+    from: {file: src/game/ui/hud.ts, line: 7, symbol: Hud}
+    confidence: high
+    how: "Hud похож на сущность (onUpdate, draw), но ничего не наследует."
+---
+schema: 1
+id: ts-browser-game-07-onenemykilled-events
+project: fixture-ts-browser-game
+languages: [ts]
+kind: consumers
+trap: true
+question: >
+  Где обработчик Game.onEnemyKilled подписывается на событие и отписывается от него, и откуда приходит событие?
+target:
+  file: src/game/game.ts
+  symbol: Game.onEnemyKilled
+  line: 72
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: event_subscribe
+    expect: must
+    from: {file: src/game/game.ts, line: 28, symbol: Game.start}
+    confidence: high
+    how: "this.events.on(\"kill\", this.onEnemyKilled) — метод-стрелка (поле класса) передан значением."
+  - rel: event_unsubscribe
+    expect: must
+    from: {file: src/game/game.ts, line: 35, symbol: Game.stop}
+    confidence: high
+    how: "this.events.off(\"kill\", this.onEnemyKilled)."
+  - rel: callback_invoke
+    expect: may
+    from: {file: src/engine/events.ts, line: 25, symbol: EventEmitter.emit}
+    confidence: high
+    how: "handler(payload) — вызов всех обработчиков из Map<ключ, Set>; связь с конкретным обработчиком — только через поток данных."
+  - rel: event_emit
+    expect: may
+    from: {file: src/game/game.ts, line: 47, symbol: Game.killEnemy}
+    confidence: high
+    how: "this.events.emit(\"kill\", …) — источник события; связь по строковому каналу \"kill\" (ADR-006 8.3: после MVP)."
+  # --- ловушки: тот же эмиттер, другие обработчики и каналы ---
+  - rel: event_subscribe
+    expect: must_not
+    from: {file: src/game/game.ts, line: 29, symbol: Game.start}
+    confidence: high
+    how: "Тот же канал \"kill\", но обработчик — лямбда с вызовом AudioBus.playHit."
+  - rel: event_subscribe
+    expect: must_not
+    from: {file: src/game/game.ts, line: 30, symbol: Game.start}
+    confidence: high
+    how: "Канал \"gameover\", обработчик AudioBus.playGameOver."
+  - rel: event_emit
+    expect: must_not
+    from: {file: src/game/game.ts, line: 37, symbol: Game.stop}
+    confidence: high
+    how: "emit(\"gameover\") — другой канал."
+notes: >
+  Обработчик — поле-стрелка (private onEnemyKilled = (e) => {…}); ключ узла тот же, что у метода. Цепочка
+  emit → handler(payload) проходит через коллекцию обработчиков и строковый канал, поэтому may.
+---
+schema: 1
+id: ts-browser-game-08-playhit-lambda-handler
+project: fixture-ts-browser-game
+languages: [ts]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает AudioBus.playHit?
+target:
+  file: src/game/audio.ts
+  symbol: AudioBus.playHit
+  line: 6
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/game/game.ts, line: 29, symbol: Game.start}
+    confidence: high
+    how: "(e) => this.audio.playHit(e) — вызов внутри лямбды-обработчика относится к объемлющему методу; тип поля audio — из инициализатора new AudioBus() (стр. 22)."
+  - rel: event_emit
+    expect: may
+    from: {file: src/game/game.ts, line: 47, symbol: Game.killEnemy}
+    confidence: high
+    how: "emit(\"kill\") запускает лямбду из стр. 29."
+  - rel: callback_invoke
+    expect: may
+    from: {file: src/engine/events.ts, line: 25, symbol: EventEmitter.emit}
+    confidence: high
+    how: "handler(payload) вызывает лямбду."
+  # --- ловушки ---
+  - rel: event_subscribe
+    expect: must_not
+    from: {file: src/game/game.ts, line: 30, symbol: Game.start}
+    confidence: high
+    how: "Подписка соседнего метода playGameOver того же AudioBus."
+  - rel: event_emit
+    expect: must_not
+    from: {file: src/game/game.ts, line: 37, symbol: Game.stop}
+    confidence: high
+    how: "emit(\"gameover\") — другой канал."
+---
+schema: 1
+id: ts-browser-game-09-playgameover-method-as-handler
+project: fixture-ts-browser-game
+languages: [ts]
+kind: consumers
+trap: true
+question: >
+  Где используется AudioBus.playGameOver?
+target:
+  file: src/game/audio.ts
+  symbol: AudioBus.playGameOver
+  line: 10
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: event_subscribe
+    expect: must
+    from: {file: src/game/game.ts, line: 30, symbol: Game.start}
+    confidence: high
+    how: "this.events.on(\"gameover\", this.audio.playGameOver) — метод передан значением (это же callback_register)."
+  - rel: event_emit
+    expect: may
+    from: {file: src/game/game.ts, line: 37, symbol: Game.stop}
+    confidence: high
+    how: "emit(\"gameover\") — источник события."
+  - rel: callback_invoke
+    expect: may
+    from: {file: src/engine/events.ts, line: 25, symbol: EventEmitter.emit}
+    confidence: high
+    how: "handler(payload)."
+  # --- ловушки ---
+  - rel: call
+    expect: must_not
+    from: {file: src/game/game.ts, line: 29, symbol: Game.start}
+    confidence: high
+    how: "Соседняя подписка вызывает playHit."
+  - rel: event_emit
+    expect: must_not
+    from: {file: src/game/game.ts, line: 47, symbol: Game.killEnemy}
+    confidence: high
+    how: "emit(\"kill\") — другой канал."
+---
+schema: 1
+id: ts-browser-game-10-starttimer-js-module
+project: fixture-ts-browser-game
+languages: [ts, js]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает startTimer из JS-модуля src/util/timer.js?
+target:
+  file: src/util/timer.js
+  symbol: startTimer
+  line: 8
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/game/game.ts, line: 31, symbol: Game.start}
+    confidence: high
+    how: "import { startTimer, stopTimer } from \"../util/timer.js\" (стр. 2) — файл реально .js, соседнего .ts нет: правило «.js → .ts» должно откатиться к самому .js."
+  - rel: import
+    expect: may
+    from: {file: src/game/game.ts, line: 2}
+    confidence: high
+    how: "Импорт символа из JS-модуля."
+  # --- ловушка ---
+  - rel: call
+    expect: must_not
+    from: {file: src/game/game.ts, line: 36, symbol: Game.stop}
+    confidence: high
+    how: "stopTimer(this.timerId) — соседняя функция того же модуля."
+---
+schema: 1
+id: ts-browser-game-11-tick-in-timer-callback
+project: fixture-ts-browser-game
+languages: [ts, js]
+kind: consumers
+trap: false
+question: >
+  Кто вызывает Game.tick?
+target:
+  file: src/game/game.ts
+  symbol: Game.tick
+  line: 50
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/game/game.ts, line: 31, symbol: Game.start}
+    confidence: high
+    how: "startTimer(() => this.tick(1 / 60), 16) — вызов внутри лямбды относится к Game.start; this — Game."
+  - rel: callback_invoke
+    expect: may
+    from: {external: "browser:event-loop"}
+    confidence: high
+    how: "Лямбду вызывает браузер через window.setInterval (timer.js:9); в коде проекта места вызова нет."
+notes: >
+  Колбэк передаётся в JS-функцию, а та — во внешний API браузера.
+---
+schema: 1
+id: ts-browser-game-12-onkeydown-dom-callback
+project: fixture-ts-browser-game
+languages: [ts]
+kind: consumers
+trap: false
+question: >
+  Откуда вызывается onKeyDown в src/game/main.ts?
+target:
+  file: src/game/main.ts
+  symbol: onKeyDown
+  line: 5
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: callback_register
+    expect: must
+    from: {file: src/game/main.ts, line: 14}
+    confidence: high
+    how: "window.addEventListener(\"keydown\", onKeyDown) — функция передана значением на верхнем уровне модуля."
+  - rel: callback_invoke
+    expect: may
+    from: {external: "browser:event-loop"}
+    confidence: high
+    how: "Вызывает браузер при нажатии клавиши."
+---
+schema: 1
+id: ts-browser-game-13-dynamic-import-level1
+project: fixture-ts-browser-game
+languages: [ts]
+kind: consumers
+trap: true
+question: >
+  Кто загружает и вызывает уровень src/game/levels/level1.ts (функция по умолчанию buildLevel)?
+target:
+  file: src/game/levels/level1.ts
+  symbol: buildLevel
+  line: 3
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: import
+    expect: must
+    from: {file: src/game/game.ts, line: 64, symbol: Game.loadLevel}
+    confidence: high
+    how: "await import(\"./levels/level1\") — динамический импорт с литералом; ADR-006 8.3: import(\"литерал\") → imports."
+  - rel: call
+    expect: may
+    from: {file: src/game/game.ts, line: 65, symbol: Game.loadLevel}
+    confidence: high
+    how: "level.default(this) — тип level выводится из динамического импорта; default → buildLevel. Статический разбор не обязан связывать."
+  - rel: import
+    expect: may
+    from: {file: src/game/game.ts, line: 68, symbol: Game.loadLevel}
+    confidence: high
+    how: "import(`./levels/level${index}.ts`) — шаблонная строка: подходят level1.ts и level2.ts; статически не определить (unresolved dynamic)."
+  - rel: call
+    expect: may
+    from: {file: src/game/game.ts, line: 69, symbol: Game.loadLevel}
+    confidence: high
+    how: "level.default(this) после шаблонного импорта."
+  - rel: call
+    expect: may
+    from: {file: src/game/main.ts, line: 16}
+    confidence: high
+    how: "game.loadLevel(1) — вход в цепочку (транзитивно, через Game.loadLevel)."
+  # --- ловушка ---
+  - rel: reference
+    expect: must_not
+    from: {file: src/game/levels/level2.ts, line: 3, symbol: buildLevel}
+    confidence: high
+    how: "Одноимённая функция по умолчанию в level2.ts."
+notes: >
+  Литеральный динамический импорт — must (ADR-006 обещает ребро imports); вызов через level.default и шаблонный
+  импорт — may. Запись main.ts:16 — транзитивное звено.
+---
+schema: 1
+id: ts-browser-game-14-engine-math-module-imports
+project: fixture-ts-browser-game
+languages: [ts]
+kind: consumers
+trap: false
+question: >
+  Какие модули импортируют модуль src/engine/math/index.ts (в том числе через алиасы tsconfig и export *)?
+target:
+  file: src/engine/math/index.ts
+  line: 1
+direction: incoming
+match: file
+edges:
+  - rel: import
+    expect: must
+    from: {file: src/engine/index.ts, line: 4}
+    confidence: high
+    how: "export * from \"./math\" — папка → index.ts."
+  - rel: import
+    expect: must
+    from: {file: src/game/actors/player.ts, line: 2}
+    confidence: high
+    how: "from \"@engine/math\": paths \"@engine/*\" → src/engine/math → index.ts; paths и baseUrl заданы в tsconfig.base.json, tsconfig.json его расширяет (extends)."
+  - rel: import
+    expect: must
+    from: {file: src/game/actors/enemy.ts, line: 1}
+    confidence: high
+    how: "import * as math from \"@engine/math\"."
+  - rel: import
+    expect: may
+    from: {file: src/game/actors/actor.ts, line: 1}
+    confidence: high
+    how: "from \"@engine\" → src/engine/index.ts → export * from \"./math\" (Vector) — транзитивно через реэкспорт."
+notes: >
+  Цель — модуль (файл), символа нет; ключ ADR-006 — ts:browser-game:src/engine/math/index.ts.
+---
+schema: 1
+id: ts-browser-game-15-util-index-alias-imports
+project: fixture-ts-browser-game
+languages: [ts, js]
+kind: consumers
+trap: true
+question: >
+  Какие модули импортируют src/util/index.ts (алиас @util)?
+target:
+  file: src/util/index.ts
+  line: 1
+direction: incoming
+match: file
+edges:
+  - rel: import
+    expect: must
+    from: {file: src/game/scoring.ts, line: 1}
+    confidence: high
+    how: "from \"@util\" — точный алиас paths без звёздочки."
+  - rel: import
+    expect: must
+    from: {file: src/game/actors/enemy.ts, line: 2}
+    confidence: high
+    how: "import { randomInt } from \"@util\" → export * from \"./random\"."
+  # --- ловушки: импорты соседних модулей format ---
+  - rel: import
+    expect: must_not
+    from: {file: src/util/debug.js, line: 2}
+    confidence: high
+    how: "import from \"./format\" — это src/util/format.ts напрямую, не index."
+  - rel: import
+    expect: must_not
+    from: {file: src/game/ui/hud.ts, line: 1}
+    confidence: high
+    how: "import from \"./format\" — src/game/ui/format.ts."
+---
+schema: 1
+id: ts-browser-game-16-vector-add-trap
+project: fixture-ts-browser-game
+languages: [ts]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Vector.add? (В эмиттере событий есть вызов Set.add — это другой метод.)
+target:
+  file: src/engine/math/vector.ts
+  symbol: Vector.add
+  line: 11
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/game/actors/actor.ts, line: 13, symbol: Actor.onUpdate}
+    confidence: high
+    how: "this.pos.add(...) — поле pos: Vector (стр. 4)."
+  - rel: call
+    expect: must
+    from: {file: src/game/actors/player.ts, line: 18, symbol: Player.jump}
+    confidence: high
+    how: "this.vel.add(...) — поле vel: Vector унаследовано от Actor (actor.ts:5)."
+  - rel: test
+    expect: may
+    from: {file: tests/player.test.ts, line: 8}
+    confidence: high
+    how: "player.jump() → Vector.add (транзитивно)."
+  # --- ловушка ---
+  - rel: call
+    expect: must_not
+    from: {file: src/engine/events.ts, line: 12, symbol: EventEmitter.on}
+    confidence: high
+    how: "set.add(handler) — Set.add стандартной библиотеки."
+---
+schema: 1
+id: ts-browser-game-17-player-jump-tests
+project: fixture-ts-browser-game
+languages: [ts]
+kind: consumers
+trap: false
+question: >
+  Кто вызывает и какие тесты проверяют Player.jump?
+target:
+  file: src/game/actors/player.ts
+  symbol: Player.jump
+  line: 14
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/game/main.ts, line: 7, symbol: onKeyDown}
+    confidence: high
+    how: "game.player.jump() — game = new Game(), поле player = new Player() (game.ts:18)."
+  - rel: test
+    expect: must
+    from: {file: tests/player.test.ts, line: 8}
+    confidence: high
+    how: "vitest: const player = new Player(); player.jump()."
+  - rel: test
+    expect: must
+    from: {file: tests/player.test.ts, line: 11}
+    confidence: high
+    how: "Повторный вызов в том же тесте."
+---
+schema: 1
+id: ts-browser-game-18-computescore-tests
+project: fixture-ts-browser-game
+languages: [ts]
+kind: consumers
+trap: false
+question: >
+  Кто вызывает computeScore и какие тесты его проверяют?
+target:
+  file: src/game/scoring.ts
+  symbol: computeScore
+  line: 3
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/game/game.ts, line: 37, symbol: Game.stop}
+    confidence: high
+    how: "Относительный импорт ./scoring (стр. 6)."
+  - rel: call
+    expect: must
+    from: {file: src/game/game.ts, line: 59, symbol: Game.tick}
+    confidence: high
+    how: "computeScore(this.kills, this.elapsed) внутри аргумента."
+  - rel: test
+    expect: must
+    from: {file: tests/scoring.test.ts, line: 6}
+    confidence: high
+    how: "Импорт через алиас @game/* (стр. 2)."
+  - rel: import
+    expect: may
+    from: {file: tests/scoring.test.ts, line: 2}
+    confidence: high
+    how: "import from \"@game/scoring\"."

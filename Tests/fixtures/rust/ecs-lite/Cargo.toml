@@ -1,0 +1,14 @@
+[package]
+name = "ecs-lite"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "ecs-lite"
+path = "src/main.rs"
+
+[dependencies]

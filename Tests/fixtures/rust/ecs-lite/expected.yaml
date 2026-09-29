@@ -1,0 +1,812 @@
+# Ожидаемый граф синтетической базы Tests/fixtures/rust/ecs-lite (F02-03).
+# Формат — Bench/README.md («Формат эталона»); один YAML-документ (между `---`) = один эталон.
+# Пути — от корня базы (папка этого файла), строки — с 1; line_tolerance: 0 — строки в синтетике точные,
+# а соседние строки часто принадлежат разным записям (must рядом с must_not). confidence у синтетики всегда high.
+# Символы Rust: `Type::method` (inherent), `<Type as Trait>::method` (реализация трейта), `Trait::method`
+# (объявление в трейте, в том числе с телом по умолчанию), свободная функция — путь модуля `math::ops::clamp`,
+# макрос — `vec2!`, блок impl — "impl Trait for Type". Крейт-библиотека ecs_lite (пакет ecs-lite), бинарник — src/main.rs.
+---
+schema: 1
+id: rust-ecs-lite-01-draw-trait-imports
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: consumers
+trap: false
+question: >
+  Какие файлы импортируют трейт Draw (в том числе через pub use-реэкспорт в корне крейта и через super::)?
+target:
+  file: src/render/mod.rs
+  symbol: Draw
+  line: 8
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: import
+    expect: must
+    from: {file: src/lib.rs, line: 12}
+    confidence: high
+    how: "pub use render::{Draw, Renderer} — реэкспорт в корень крейта."
+  - rel: import
+    expect: must
+    from: {file: src/render/sprite.rs, line: 1}
+    confidence: high
+    how: "use super::{Draw, Renderer} — super из render::sprite = render."
+  - rel: import
+    expect: must
+    from: {file: src/render/text.rs, line: 1}
+    confidence: high
+    how: "use super::Draw."
+  - rel: import
+    expect: must
+    from: {file: src/world/mod.rs, line: 5}
+    confidence: high
+    how: "use super::render::{Draw, Renderer} — super из world = корень крейта."
+  - rel: import
+    expect: must
+    from: {file: src/main.rs, line: 5}
+    confidence: high
+    how: "use ecs_lite::{…, Draw, …} — бинарник импортирует через реэкспорт lib.rs:12 (крейт-библиотека по имени пакета с - → _)."
+  - rel: import
+    expect: must
+    from: {file: tests/render_test.rs, line: 3}
+    confidence: high
+    how: "Интеграционный тест — отдельный крейт, импорт через реэкспорт."
+---
+schema: 1
+id: rust-ecs-lite-02-clamp-vs-f32-clamp
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает свободную функцию math::ops::clamp? (У f32 есть стандартный метод clamp.)
+target:
+  file: src/math/ops.rs
+  symbol: math::ops::clamp
+  line: 2
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/world/systems.rs, line: 10, symbol: world::systems::run_physics}
+    confidence: high
+    how: "clamp(e.vel.x, …) — импорт use crate::math::{clamp, Vec2} (стр. 2) → pub use self::ops::clamp (math/mod.rs:4) из приватного модуля ops."
+  - rel: import
+    expect: must
+    from: {file: src/math/mod.rs, line: 4}
+    confidence: high
+    how: "pub use self::ops::clamp — self:: и реэкспорт из приватного модуля."
+  - rel: import
+    expect: must
+    from: {file: src/world/systems.rs, line: 2}
+    confidence: high
+    how: "use crate::math::{clamp, Vec2} — путь через реэкспорт."
+  # --- ловушка ---
+  - rel: call
+    expect: must_not
+    from: {file: src/world/systems.rs, line: 11, symbol: world::systems::run_physics}
+    confidence: high
+    how: "e.vel.y.clamp(…) — метод f32::clamp стандартной библиотеки (синтаксис вызова метода, получатель f32)."
+---
+schema: 1
+id: rust-ecs-lite-03-draw-implementations
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: implementations
+trap: true
+question: >
+  Какие типы реализуют трейт Draw? У ui::Label и World есть собственные методы draw.
+target:
+  file: src/render/mod.rs
+  symbol: Draw
+  line: 8
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: implement
+    expect: must
+    from: {file: src/render/sprite.rs, line: 21, symbol: "impl Draw for Sprite"}
+    confidence: high
+    how: "Переопределяет draw и метод по умолчанию layer."
+  - rel: implement
+    expect: must
+    from: {file: src/render/text.rs, line: 15, symbol: "impl Draw for Text"}
+    confidence: high
+    how: "Только draw; layer — по умолчанию из трейта."
+  - rel: reference
+    expect: may
+    from: {file: src/render/mod.rs, line: 22, symbol: "impl<T: Draw> Describe for T"}
+    confidence: high
+    how: "Ограничение T: Draw в blanket impl другого трейта."
+  - rel: reference
+    expect: may
+    from: {file: src/render/sprite.rs, line: 32, symbol: render::sprite::make_marker}
+    confidence: high
+    how: "Возвращаемый тип -> impl Draw."
+  # --- ловушки: одноимённые inherent-методы ---
+  - rel: implement
+    expect: must_not
+    from: {file: src/ui.rs, line: 7, symbol: "impl Label"}
+    confidence: high
+    how: "Label::draw(&self) -> String — inherent-метод, Label не реализует Draw."
+  - rel: implement
+    expect: must_not
+    from: {file: src/world/mod.rs, line: 13, symbol: "impl World"}
+    confidence: high
+    how: "World::draw — inherent-метод, делегирует Renderer::draw_all."
+---
+schema: 1
+id: rust-ecs-lite-04-describe-blanket-impl
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: implementations
+trap: true
+question: >
+  Кто реализует трейт Describe?
+target:
+  file: src/render/mod.rs
+  symbol: Describe
+  line: 18
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: implement
+    expect: must
+    from: {file: src/render/mod.rs, line: 22, symbol: "impl<T: Draw> Describe for T"}
+    confidence: high
+    how: "Blanket impl: Describe есть у каждого T: Draw."
+  - rel: implement
+    expect: may
+    from: {file: src/render/sprite.rs, line: 5, symbol: Sprite}
+    confidence: high
+    how: "Через blanket impl (Sprite: Draw) — связь выводится подстановкой, в коде её нет."
+  - rel: implement
+    expect: may
+    from: {file: src/render/text.rs, line: 4, symbol: Text}
+    confidence: high
+    how: "Через blanket impl (Text: Draw)."
+  - rel: reference
+    expect: may
+    from: {file: src/render/mod.rs, line: 68, symbol: render::summarize}
+    confidence: high
+    how: "where T: Describe."
+  - rel: import
+    expect: may
+    from: {file: src/main.rs, line: 2}
+    confidence: high
+    how: "use ecs_lite::render::{…, Describe, …} — нужен для вызова sprite.describe()."
+  # --- ловушка ---
+  - rel: implement
+    expect: must_not
+    from: {file: src/ui.rs, line: 7, symbol: "impl Label"}
+    confidence: high
+    how: "Label::describe — inherent-метод; Label не Draw, blanket impl к нему не применим."
+---
+schema: 1
+id: rust-ecs-lite-05-describe-method-callers
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает и реализует метод Describe::describe?
+target:
+  file: src/render/mod.rs
+  symbol: Describe::describe
+  line: 19
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: override
+    expect: must
+    from: {file: src/render/mod.rs, line: 23, symbol: "<T as Describe>::describe"}
+    confidence: high
+    how: "Метод blanket impl."
+  - rel: call_interface
+    expect: must
+    from: {file: src/render/mod.rs, line: 72, symbol: render::summarize}
+    confidence: high
+    how: "item.describe() в цикле for item in items (items: &[T]), where T: Describe — метод трейта через ограничение (ADR-006: EXTRACTED 0.95)."
+  - rel: call
+    expect: may
+    from: {file: src/main.rs, line: 39, symbol: main}
+    confidence: high
+    how: "sprite.describe() — у Sprite нет своего describe; разрешение требует вывести Sprite: Describe из blanket impl (Sprite: Draw). Статический разбор не обязан."
+  # --- ловушки ---
+  - rel: call
+    expect: must_not
+    from: {file: src/main.rs, line: 44, symbol: main}
+    confidence: high
+    how: "label.describe() — inherent Label::describe."
+  - rel: reference
+    expect: must_not
+    from: {file: src/ui.rs, line: 20, symbol: Label::describe}
+    confidence: high
+    how: "Одноимённый inherent-метод."
+---
+schema: 1
+id: rust-ecs-lite-06-draw-layer-default-method
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает и переопределяет метод по умолчанию Draw::layer? (У ui::Label есть поле layer.)
+target:
+  file: src/render/mod.rs
+  symbol: Draw::layer
+  line: 12
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call_interface
+    expect: must
+    from: {file: src/render/mod.rs, line: 24, symbol: "<T as Describe>::describe"}
+    confidence: high
+    how: "self.layer(), self: &T, T: Draw — ограничение blanket impl."
+  - rel: call_interface
+    expect: may
+    from: {file: src/render/mod.rs, line: 58, symbol: Renderer::draw_sorted}
+    confidence: high
+    how: "item.layer() в замыкании sort_by_key; T: Draw — тип параметра замыкания выводится из сигнатуры std-метода, статический разбор без вывода типов не обязан."
+  - rel: override
+    expect: must
+    from: {file: src/render/sprite.rs, line: 26, symbol: "<Sprite as Draw>::layer"}
+    confidence: high
+    how: "Sprite переопределяет метод по умолчанию."
+  - rel: test
+    expect: must
+    from: {file: tests/render_test.rs, line: 26, symbol: sprite_layer_overrides_default}
+    confidence: high
+    how: "t.layer(), t: Text — у Text нет своего layer, вызывается тело по умолчанию из трейта."
+  - rel: test
+    expect: may
+    from: {file: tests/render_test.rs, line: 25, symbol: sprite_layer_overrides_default}
+    confidence: high
+    how: "s.layer(), s: Sprite — попадает в переопределение <Sprite as Draw>::layer, не в тело по умолчанию."
+  # --- ловушки: поле layer ---
+  - rel: reference
+    expect: must_not
+    from: {file: src/ui.rs, line: 17, symbol: Label::draw}
+    confidence: high
+    how: "self.layer — чтение поля Label.layer."
+  - rel: reference
+    expect: must_not
+    from: {file: src/ui.rs, line: 11, symbol: Label::new}
+    confidence: high
+    how: "layer: 9 — инициализация поля."
+notes: >
+  Метод с телом по умолчанию: вызов на типе без переопределения (Text) должен вести в объявление трейта.
+---
+schema: 1
+id: rust-ecs-lite-07-draw-all-dyn-callees
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: callees
+trap: true
+question: >
+  Какие методы draw может вызвать Renderer::draw_all в строке item.draw(self) (item: &Box<dyn Draw>)?
+target:
+  file: src/render/mod.rs
+  symbol: Renderer::draw_all
+  line: 45
+direction: outgoing
+match: line
+line_tolerance: 0
+edges:
+  - rel: call_interface
+    expect: must
+    to: {file: src/render/mod.rs, line: 9, symbol: Draw::draw}
+    confidence: high
+    how: "dyn Draw → метод трейта (ADR-006 8.5: EXTRACTED 0.95)."
+  - rel: call_interface
+    expect: may
+    to: {file: src/render/sprite.rs, line: 22, symbol: "<Sprite as Draw>::draw"}
+    confidence: high
+    how: "Динамическая диспетчеризация: реальная цель зависит от содержимого Box; статически — только через список реализаций. Допустимо, не обязательно."
+  - rel: call_interface
+    expect: may
+    to: {file: src/render/text.rs, line: 16, symbol: "<Text as Draw>::draw"}
+    confidence: high
+    how: "То же."
+  # --- ловушки ---
+  - rel: call_interface
+    expect: must_not
+    to: {file: src/ui.rs, line: 16, symbol: Label::draw}
+    confidence: high
+    how: "Label не реализует Draw."
+  - rel: call_interface
+    expect: must_not
+    to: {file: src/world/mod.rs, line: 35, symbol: World::draw}
+    confidence: high
+    how: "Inherent-метод World; сам вызывает draw_all, а не наоборот."
+---
+schema: 1
+id: rust-ecs-lite-08-sprite-draw-callers
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: consumers
+trap: true
+question: >
+  Откуда вызывается <Sprite as Draw>::draw — напрямую, через impl Trait, через дженерик и через dyn?
+target:
+  file: src/render/sprite.rs
+  symbol: "<Sprite as Draw>::draw"
+  line: 22
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/main.rs, line: 19, symbol: main}
+    confidence: high
+    how: "sprite.draw(&mut renderer); sprite = Sprite::new(…) → Self = Sprite; трейт Draw в области (main.rs:5)."
+  - rel: call_interface
+    expect: may
+    from: {file: src/render/mod.rs, line: 53, symbol: Renderer::draw_one}
+    confidence: high
+    how: "item: &impl Draw — статически Draw::draw; Sprite — после мономорфизации (main.rs:20 передаёт &sprite)."
+  - rel: call_interface
+    expect: may
+    from: {file: src/render/mod.rs, line: 60, symbol: Renderer::draw_sorted}
+    confidence: high
+    how: "T: Draw, вызывается с [Sprite] (main.rs:35)."
+  - rel: call_interface
+    expect: may
+    from: {file: src/render/mod.rs, line: 47, symbol: Renderer::draw_all}
+    confidence: high
+    how: "dyn Draw — динамическая диспетчеризация."
+  - rel: call_interface
+    expect: may
+    from: {file: src/main.rs, line: 23, symbol: main}
+    confidence: high
+    how: "marker.draw(…): marker — непрозрачный impl Draw из make_marker (sprite.rs:32); реальный тип Sprite скрыт."
+  - rel: call
+    expect: may
+    from: {file: src/main.rs, line: 31, symbol: main}
+    confidence: high
+    how: "world.draw(&items) → World::draw → draw_all → dyn (транзитивно)."
+  - rel: test
+    expect: may
+    from: {file: tests/render_test.rs, line: 15, symbol: draw_all_uses_every_item}
+    confidence: high
+    how: "r.draw_all(&items) с Sprite внутри Box<dyn Draw> (транзитивно)."
+  # --- ловушки ---
+  - rel: call
+    expect: must_not
+    from: {file: src/main.rs, line: 43, symbol: main}
+    confidence: high
+    how: "label.draw() — inherent Label::draw."
+  - rel: reference
+    expect: must_not
+    from: {file: src/render/text.rs, line: 16, symbol: "<Text as Draw>::draw"}
+    confidence: high
+    how: "Реализация того же метода трейта для другого типа."
+notes: >
+  Прямой вызов на известном типе — must; impl Trait (аргумент и возврат), дженерик и dyn — may: разбор без
+  мономорфизации видит только Draw::draw.
+---
+schema: 1
+id: rust-ecs-lite-09-component-update-default
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает и переопределяет Component::update (метод с пустым телом по умолчанию)? В проекте есть ещё
+  Entity::update, World::update и Label::update.
+target:
+  file: src/components.rs
+  symbol: Component::update
+  line: 9
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call_interface
+    expect: must
+    from: {file: src/world/entity.rs, line: 27, symbol: Entity::update}
+    confidence: high
+    how: "c.update(dt) в цикле for c in &mut self.components (поле Vec<Box<dyn Component>>) — метод трейта через dyn (EXTRACTED 0.95)."
+  - rel: override
+    expect: must
+    from: {file: src/components.rs, line: 31, symbol: "<Velocity as Component>::update"}
+    confidence: high
+    how: "Velocity переопределяет; Health (стр. 17) использует тело по умолчанию."
+  - rel: call
+    expect: may
+    from: {file: src/world/mod.rs, line: 30, symbol: World::update}
+    confidence: high
+    how: "e.update(dt) — это Entity::update (транзитивно ведёт в target)."
+  - rel: call
+    expect: may
+    from: {file: src/main.rs, line: 14, symbol: main}
+    confidence: high
+    how: "world.update(0.016) — World::update (транзитивно, глубина 3)."
+  # --- ловушки ---
+  - rel: call
+    expect: must_not
+    from: {file: src/main.rs, line: 42, symbol: main}
+    confidence: high
+    how: "label.update(\"Go\") — inherent Label::update, с target не связан."
+  - rel: reference
+    expect: must_not
+    from: {file: src/ui.rs, line: 24, symbol: Label::update}
+    confidence: high
+    how: "Одноимённый inherent-метод."
+---
+schema: 1
+id: rust-ecs-lite-10-vec2-new-trap
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Vec2::new? (Конструкторов new в проекте шесть; макрос vec2! разворачивается в Vec2::new.)
+target:
+  file: src/math/vec2.rs
+  symbol: Vec2::new
+  line: 12
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/math/vec2.rs, line: 17, symbol: Vec2::scale}
+    confidence: high
+    how: "Vec2::new(…) — путь с типом."
+  - rel: call
+    expect: must
+    from: {file: src/math/vec2.rs, line: 29, symbol: "<Vec2 as Add>::add"}
+    confidence: high
+    how: "Внутри реализации std::ops::Add."
+  - rel: call
+    expect: must
+    from: {file: src/world/systems.rs, line: 7, symbol: world::systems::run_physics}
+    confidence: high
+    how: "Vec2 импортирован через use crate::math::{clamp, Vec2} → pub use vec2::Vec2."
+  - rel: test
+    expect: must
+    from: {file: src/math/vec2.rs, line: 39, symbol: tests::length_of_3_4_is_5}
+    confidence: high
+    how: "Модульный тест #[cfg(test)] mod tests в том же файле, use super::*."
+  - rel: test
+    expect: must
+    from: {file: src/math/vec2.rs, line: 44, symbol: tests::add_is_componentwise}
+    confidence: high
+    how: "Два вызова в строке."
+  - rel: test
+    expect: must
+    from: {file: tests/render_test.rs, line: 21, symbol: sprite_layer_overrides_default}
+    confidence: high
+    how: "Интеграционный тест, use ecs_lite::math::Vec2."
+  # --- вызовы через макрос vec2! (раскрытие не обязательно) ---
+  - rel: call
+    expect: may
+    from: {file: src/main.rs, line: 9, symbol: main}
+    confidence: high
+    how: "vec2!(1, 2) → $crate::math::Vec2::new(…)."
+  - rel: call
+    expect: may
+    from: {file: src/main.rs, line: 12, symbol: main}
+    confidence: high
+    how: "vec2!(3, 4)."
+  - rel: call
+    expect: may
+    from: {file: src/main.rs, line: 16, symbol: main}
+    confidence: high
+    how: "vec2!(5, 5)."
+  - rel: call
+    expect: may
+    from: {file: src/render/sprite.rs, line: 33, symbol: render::sprite::make_marker}
+    confidence: high
+    how: "vec2!(x, y) внутри крейта (textual scope через #[macro_use] mod macros)."
+  - rel: test
+    expect: may
+    from: {file: tests/render_test.rs, line: 8, symbol: draw_all_uses_every_item}
+    confidence: high
+    how: "vec2!(0, 0)."
+  - rel: test
+    expect: may
+    from: {file: tests/render_test.rs, line: 31, symbol: vector_length}
+    confidence: high
+    how: "vec2!(3, 4)."
+  # --- ловушки: другие new ---
+  - rel: call
+    expect: must_not
+    from: {file: src/main.rs, line: 8, symbol: main}
+    confidence: high
+    how: "World::new()."
+  - rel: call
+    expect: must_not
+    from: {file: src/main.rs, line: 10, symbol: main}
+    confidence: high
+    how: "Entity::new(start)."
+  - rel: call
+    expect: must_not
+    from: {file: src/main.rs, line: 17, symbol: main}
+    confidence: high
+    how: "Sprite::new(…)."
+  - rel: call
+    expect: must_not
+    from: {file: src/main.rs, line: 18, symbol: main}
+    confidence: high
+    how: "Renderer::new()."
+  - rel: call
+    expect: must_not
+    from: {file: src/main.rs, line: 41, symbol: main}
+    confidence: high
+    how: "Label::new(…)."
+  - rel: call
+    expect: must_not
+    from: {file: src/world/mod.rs, line: 17, symbol: World::new}
+    confidence: high
+    how: "Renderer::new()."
+  - rel: call
+    expect: must_not
+    from: {file: src/world/entity.rs, line: 15, symbol: Entity::new}
+    confidence: high
+    how: "Vec::new() стандартной библиотеки."
+notes: >
+  Макросы: ADR-006 не раскрывает macro_rules!, поэтому вызовы Vec2::new из раскрытия vec2! — may (ссылки внутри
+  макроса — unresolved unsupported). Ребро на сам макрос проверяет эталон 11.
+---
+schema: 1
+id: rust-ecs-lite-11-vec2-macro
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: consumers
+trap: true
+question: >
+  Где используется макрос vec2!? (Есть модуль math::vec2 и стандартный макрос vec!.)
+target:
+  file: src/macros.rs
+  symbol: vec2!
+  line: 3
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/main.rs, line: 9, symbol: main}
+    confidence: high
+    how: "vec2!(1, 2); макрос импортирован use ecs_lite::{vec2, …} (#[macro_export] кладёт его в корень крейта)."
+  - rel: call
+    expect: must
+    from: {file: src/main.rs, line: 12, symbol: main}
+    confidence: high
+    how: "vec2!(3, 4) внутри цепочки вызовов."
+  - rel: call
+    expect: must
+    from: {file: src/main.rs, line: 16, symbol: main}
+    confidence: high
+    how: "vec2!(5, 5)."
+  - rel: call
+    expect: must
+    from: {file: src/render/sprite.rs, line: 33, symbol: render::sprite::make_marker}
+    confidence: high
+    how: "Внутри крейта без импорта: textual scope от #[macro_use] mod macros (lib.rs:3–4), объявленного раньше pub mod render."
+  - rel: test
+    expect: must
+    from: {file: tests/render_test.rs, line: 8, symbol: draw_all_uses_every_item}
+    confidence: high
+    how: "use ecs_lite::{vec2, …}."
+  - rel: test
+    expect: must
+    from: {file: tests/render_test.rs, line: 31, symbol: vector_length}
+    confidence: high
+    how: "vec2!(3, 4).length()."
+  - rel: import
+    expect: may
+    from: {file: src/main.rs, line: 5}
+    confidence: high
+    how: "use ecs_lite::{vec2, …}."
+  - rel: import
+    expect: may
+    from: {file: tests/render_test.rs, line: 3}
+    confidence: high
+    how: "use ecs_lite::{vec2, …}."
+  # --- ловушки ---
+  - rel: call
+    expect: must_not
+    from: {file: src/main.rs, line: 25, symbol: main}
+    confidence: high
+    how: "vec![…] — стандартный макрос vec!."
+  - rel: call
+    expect: must_not
+    from: {file: src/main.rs, line: 34, symbol: main}
+    confidence: high
+    how: "vec![sprite.clone(), rock]."
+  - rel: test
+    expect: must_not
+    from: {file: tests/render_test.rs, line: 9, symbol: draw_all_uses_every_item}
+    confidence: high
+    how: "vec![…]."
+  - rel: reference
+    expect: must_not
+    from: {file: src/math/mod.rs, line: 2}
+    confidence: high
+    how: "pub mod vec2 — модуль с тем же именем, не макрос."
+notes: >
+  Ожидаем от разбора: вызов m!(…) — ребро на узел macro (ADR-006 8.5), по имени и области видимости макросов
+  (#[macro_export] + use, textual scope #[macro_use]); тело макроса не раскрывается.
+---
+schema: 1
+id: rust-ecs-lite-12-vec2-length-trap
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Vec2::length и какие тесты его проверяют? (У Text есть свой метод length.)
+target:
+  file: src/math/vec2.rs
+  symbol: Vec2::length
+  line: 20
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/components.rs, line: 33, symbol: "<Velocity as Component>::update"}
+    confidence: high
+    how: "self.0.length(); Velocity(pub Vec2) — тип поля кортежной структуры."
+  - rel: test
+    expect: must
+    from: {file: src/math/vec2.rs, line: 39, symbol: tests::length_of_3_4_is_5}
+    confidence: high
+    how: "#[test] в модуле tests того же файла."
+  - rel: test
+    expect: may
+    from: {file: tests/render_test.rs, line: 31, symbol: vector_length}
+    confidence: high
+    how: "vec2!(3, 4).length() — тип получателя известен только после раскрытия макроса."
+  # --- ловушки ---
+  - rel: call
+    expect: must_not
+    from: {file: src/render/text.rs, line: 17, symbol: "<Text as Draw>::draw"}
+    confidence: high
+    how: "self.length() — Text::length (число символов)."
+  - rel: reference
+    expect: must_not
+    from: {file: src/render/text.rs, line: 10, symbol: Text::length}
+    confidence: high
+    how: "Одноимённый метод другого типа."
+---
+schema: 1
+id: rust-ecs-lite-13-world-imports-super
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: consumers
+trap: false
+question: >
+  Где импортируется структура World?
+target:
+  file: src/world/mod.rs
+  symbol: World
+  line: 7
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: import
+    expect: must
+    from: {file: src/lib.rs, line: 13}
+    confidence: high
+    how: "pub use world::World."
+  - rel: import
+    expect: must
+    from: {file: src/world/systems.rs, line: 1}
+    confidence: high
+    how: "use super::World — дочерний модуль world::systems."
+  - rel: import
+    expect: must
+    from: {file: src/main.rs, line: 5}
+    confidence: high
+    how: "use ecs_lite::{…, World} — через реэкспорт."
+  - rel: reference
+    expect: may
+    from: {file: src/world/systems.rs, line: 6, symbol: world::systems::run_physics}
+    confidence: high
+    how: "Тип параметра world: &mut World; доступ к приватному полю entities из дочернего модуля."
+---
+schema: 1
+id: rust-ecs-lite-14-component-impls-generic-bound
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: implementations
+trap: false
+question: >
+  Какие типы реализуют трейт Component и где он используется как ограничение и dyn-тип?
+target:
+  file: src/components.rs
+  symbol: Component
+  line: 6
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: implement
+    expect: must
+    from: {file: src/components.rs, line: 17, symbol: "impl Component for Health"}
+    confidence: high
+    how: "Только name; update — по умолчанию."
+  - rel: implement
+    expect: must
+    from: {file: src/components.rs, line: 26, symbol: "impl Component for Velocity"}
+    confidence: high
+    how: "name и update."
+  - rel: reference
+    expect: may
+    from: {file: src/world/entity.rs, line: 20, symbol: Entity::with}
+    confidence: high
+    how: "Дженерик с ограничением C: Component + 'static."
+  - rel: reference
+    expect: may
+    from: {file: src/world/entity.rs, line: 7, symbol: Entity}
+    confidence: high
+    how: "Поле Vec<Box<dyn Component>>."
+  - rel: import
+    expect: may
+    from: {file: src/world/entity.rs, line: 1}
+    confidence: high
+    how: "use crate::components::Component."
+---
+schema: 1
+id: rust-ecs-lite-15-renderer-push-trap
+project: fixture-rust-ecs-lite
+languages: [rust]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Renderer::push? (Vec::push вызывается в нескольких местах, в том числе внутри самого Renderer::push.)
+target:
+  file: src/render/mod.rs
+  symbol: Renderer::push
+  line: 40
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: src/render/sprite.rs, line: 23, symbol: "<Sprite as Draw>::draw"}
+    confidence: high
+    how: "r.push(…), параметр r: &mut Renderer."
+  - rel: call
+    expect: must
+    from: {file: src/render/text.rs, line: 17, symbol: "<Text as Draw>::draw"}
+    confidence: high
+    how: "r.push(…)."
+  # --- ловушки: Vec::push ---
+  - rel: call
+    expect: must_not
+    from: {file: src/render/mod.rs, line: 41, symbol: Renderer::push}
+    confidence: high
+    how: "self.commands.push(cmd) — Vec<String>::push."
+  - rel: call
+    expect: must_not
+    from: {file: src/world/mod.rs, line: 23, symbol: World::spawn}
+    confidence: high
+    how: "self.entities.push(e) — Vec::push."
+  - rel: call
+    expect: must_not
+    from: {file: src/world/entity.rs, line: 21, symbol: Entity::with}
+    confidence: high
+    how: "self.components.push(…) — Vec::push."
+  - rel: call
+    expect: must_not
+    from: {file: src/render/mod.rs, line: 72, symbol: render::summarize}
+    confidence: high
+    how: "out.push(…) — Vec::push локального вектора."

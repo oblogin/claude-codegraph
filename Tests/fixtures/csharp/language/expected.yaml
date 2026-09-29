@@ -1,0 +1,1068 @@
+# Ожидаемый граф синтетической базы Tests/fixtures/csharp/language (F02-03).
+# Формат — Bench/README.md, «Формат эталона»; один YAML-документ (---) = один эталон.
+# Пути — от корня базы (папка этого файла). Строки проверены скриптом при составлении.
+# Символы C#: Класс.Член без пространства имён; перегрузки — со списком типов параметров;
+# явная реализация — Класс.Интерфейс.Метод; дженерики — без параметров типа.
+---
+schema: 1
+id: cs-lang-01-shape-area-overrides
+project: fixture-csharp-language
+languages: [csharp]
+kind: implementations
+trap: true
+question: >
+  Какие методы переопределяют абстрактный Shape.Area()?
+target:
+  file: Inheritance/Shape.cs
+  symbol: "Shape.Area"
+  line: 8
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: override
+    expect: must
+    from: {file: Inheritance/Circle.cs, line: 14, symbol: "Circle.Area"}
+    confidence: high
+    how: "public override double Area() в Circle : Shape."
+  - rel: override
+    expect: must
+    from: {file: Inheritance/Square.cs, line: 12, symbol: "Square.Area"}
+    confidence: high
+    how: "public override double Area() в Square : Shape."
+  - rel: override
+    expect: must
+    from: {file: Inheritance/RoundedSquare.cs, line: 13, symbol: "RoundedSquare.Area"}
+    confidence: high
+    how: "RoundedSquare : Square : Shape — переопределение через два уровня (прямо переопределяет Square.Area, транзитивно — Shape.Area)."
+  - rel: override
+    expect: must_not
+    from: {file: Traps/Room.cs, line: 10, symbol: "Room.Area"}
+    confidence: high
+    how: "Room.Area() — одноимённый метод класса, который не наследует Shape."
+notes: >
+  RoundedSquare.Area — must: отвечая «кто переопределяет Shape.Area», инструмент должен пройти цепочку баз.
+---
+schema: 1
+id: cs-lang-02-shape-subclasses
+project: fixture-csharp-language
+languages: [csharp]
+kind: implementations
+trap: true
+question: >
+  Какие классы наследуют Shape (прямо и через промежуточный класс)?
+target:
+  file: Inheritance/Shape.cs
+  symbol: "Shape"
+  line: 6
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: inherit
+    expect: must
+    from: {file: Inheritance/Circle.cs, line: 5, symbol: "Circle"}
+    confidence: high
+    how: "class Circle : Shape."
+  - rel: inherit
+    expect: must
+    from: {file: Inheritance/Square.cs, line: 3, symbol: "Square"}
+    confidence: high
+    how: "class Square : Shape."
+  - rel: inherit
+    expect: may
+    from: {file: Inheritance/RoundedSquare.cs, line: 4, symbol: "RoundedSquare"}
+    via: [Inheritance/Square.cs]
+    confidence: high
+    how: "class RoundedSquare : Square — наследник Shape только транзитивно."
+  - rel: inherit
+    expect: must_not
+    from: {file: Traps/Room.cs, line: 4, symbol: "Room"}
+    confidence: high
+    how: "Room не наследует Shape, хотя у него есть Area()."
+---
+schema: 1
+id: cs-lang-03-circle-area-callers
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Circle.Area()?
+target:
+  file: Inheritance/Circle.cs
+  symbol: "Circle.Area"
+  line: 14
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Inheritance/ShapeDemo.cs, line: 9, symbol: "ShapeDemo.Run"}
+    confidence: high
+    how: "circle.Area(); circle объявлена как var circle = new Circle(2) — статический тип Circle."
+  - rel: call_virtual
+    expect: may
+    from: {file: Inheritance/ShapeReport.cs, line: 13, symbol: "ShapeReport.TotalArea"}
+    confidence: high
+    how: "shape.Area() по статическому типу Shape; во время выполнения сюда попадает и Circle (ShapeDemo передаёт circle)."
+  - rel: call_virtual
+    expect: may
+    from: {file: Inheritance/Shape.cs, line: 12, symbol: "Shape.Describe"}
+    confidence: high
+    how: "Area() внутри Shape.Describe; для Circle вызывается через base.Describe()."
+  - rel: call
+    expect: must_not
+    from: {file: Inheritance/ShapeDemo.cs, line: 10, symbol: "ShapeDemo.Run"}
+    confidence: high
+    how: "square.Area() — вызов Square.Area (переменная типа Square)."
+  - rel: call
+    expect: must_not
+    from: {file: Traps/FloorPlan.cs, line: 7, symbol: "FloorPlan.Total"}
+    confidence: high
+    how: "room.Area() — одноимённый метод Room."
+  - rel: call
+    expect: must_not
+    from: {file: Inheritance/RoundedSquare.cs, line: 17, symbol: "RoundedSquare.Area"}
+    confidence: high
+    how: "base.Area() в RoundedSquare вызывает Square.Area."
+---
+schema: 1
+id: cs-lang-04-square-area-callers
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Square.Area()?
+target:
+  file: Inheritance/Square.cs
+  symbol: "Square.Area"
+  line: 12
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Inheritance/RoundedSquare.cs, line: 17, symbol: "RoundedSquare.Area"}
+    confidence: high
+    how: "base.Area() в RoundedSquare (база — Square)."
+  - rel: call
+    expect: must
+    from: {file: Inheritance/ShapeDemo.cs, line: 10, symbol: "ShapeDemo.Run"}
+    confidence: high
+    how: "square.Area(); var square = new Square(3)."
+  - rel: call_virtual
+    expect: may
+    from: {file: Inheritance/ShapeReport.cs, line: 13, symbol: "ShapeReport.TotalArea"}
+    confidence: high
+    how: "Вызов через Shape; в массив передан и square."
+  - rel: call
+    expect: must_not
+    from: {file: Inheritance/ShapeDemo.cs, line: 9, symbol: "ShapeDemo.Run"}
+    confidence: high
+    how: "circle.Area() — Circle.Area."
+---
+schema: 1
+id: cs-lang-05-describe-overrides
+project: fixture-csharp-language
+languages: [csharp]
+kind: implementations
+trap: true
+question: >
+  Какие методы переопределяют виртуальный Shape.Describe()?
+target:
+  file: Inheritance/Shape.cs
+  symbol: "Shape.Describe"
+  line: 10
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: override
+    expect: must
+    from: {file: Inheritance/Circle.cs, line: 19, symbol: "Circle.Describe"}
+    confidence: high
+    how: "public override string Describe() в Circle."
+  - rel: override
+    expect: must_not
+    from: {file: Inheritance/RoundedSquare.cs, line: 21, symbol: "RoundedSquare.Describe"}
+    confidence: high
+    how: "public new string Describe() в RoundedSquare скрывает метод базы, а не переопределяет: вызов через Shape попадёт в Shape.Describe."
+---
+schema: 1
+id: cs-lang-06-shape-describe-callers
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: false
+question: >
+  Кто вызывает Shape.Describe()?
+target:
+  file: Inheritance/Shape.cs
+  symbol: "Shape.Describe"
+  line: 10
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Inheritance/Circle.cs, line: 21, symbol: "Circle.Describe"}
+    confidence: high
+    how: "base.Describe() в Circle.Describe."
+  - rel: call
+    expect: must
+    from: {file: Inheritance/Shape.cs, line: 17, symbol: "Shape.Print"}
+    confidence: high
+    how: "Describe() с неявным this в невиртуальном Shape.Print."
+---
+schema: 1
+id: cs-lang-07-istorage-implementations
+project: fixture-csharp-language
+languages: [csharp]
+kind: implementations
+trap: true
+question: >
+  Какие классы реализуют IStorage?
+target:
+  file: Interfaces/IStorage.cs
+  symbol: "IStorage"
+  line: 3
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: implement
+    expect: must
+    from: {file: Interfaces/FileStore.cs, line: 5, symbol: "FileStore"}
+    confidence: high
+    how: "class FileStore : IStorage, IBackup."
+  - rel: implement
+    expect: must
+    from: {file: Interfaces/MemoryStore.cs, line: 3, symbol: "MemoryStore"}
+    confidence: high
+    how: "class MemoryStore : IStorage."
+  - rel: implement
+    expect: must_not
+    from: {file: Traps/Journal.cs, line: 6, symbol: "Journal"}
+    confidence: high
+    how: "Journal имеет Save(string) и Load(), но IStorage не реализует (в C# реализация только явная, по списку баз)."
+---
+schema: 1
+id: cs-lang-08-ibackup-save-explicit
+project: fixture-csharp-language
+languages: [csharp]
+kind: implementations
+trap: true
+question: >
+  Какой метод реализует IBackup.Save?
+target:
+  file: Interfaces/IBackup.cs
+  symbol: "IBackup.Save"
+  line: 6
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: override
+    expect: must
+    from: {file: Interfaces/FileStore.cs, line: 26, symbol: "FileStore.IBackup.Save"}
+    confidence: high
+    how: "Явная реализация void IBackup.Save(string) в FileStore."
+  - rel: override
+    expect: must_not
+    from: {file: Interfaces/FileStore.cs, line: 15, symbol: "FileStore.Save"}
+    confidence: high
+    how: "Публичный FileStore.Save(string) реализует только IStorage.Save: для IBackup.Save в классе есть явная реализация."
+---
+schema: 1
+id: cs-lang-09-istorage-save-callers
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает IStorage.Save?
+target:
+  file: Interfaces/IStorage.cs
+  symbol: "IStorage.Save"
+  line: 5
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Interfaces/StorageClient.cs, line: 14, symbol: "StorageClient.Persist"}
+    confidence: high
+    how: "_storage.Save(data); поле _storage типа IStorage."
+  - rel: call
+    expect: must
+    from: {file: Interfaces/StorageUtil.cs, line: 10, symbol: "StorageUtil.SaveAll"}
+    confidence: high
+    how: "store.Save(item); параметр типа T с ограничением where T : IStorage."
+  - rel: call
+    expect: may
+    from: {file: Interfaces/StorageClient.cs, line: 24, symbol: "StorageClient.Direct"}
+    confidence: high
+    how: "fileStore.Save(\"direct\") — прямой вызов FileStore.Save, который реализует IStorage.Save."
+  - rel: call
+    expect: may
+    from: {file: Aliases/AliasUser.cs, line: 14, symbol: "AliasUser.Run"}
+    confidence: high
+    how: "store.Save(\"alias\") через алиас Store = MemoryStore — вызов MemoryStore.Save, реализации IStorage.Save."
+  - rel: call
+    expect: must_not
+    from: {file: Interfaces/StorageClient.cs, line: 19, symbol: "StorageClient.Backup"}
+    confidence: high
+    how: "backup.Save(data) — параметр типа IBackup: это IBackup.Save."
+  - rel: call
+    expect: must_not
+    from: {file: Traps/Warehouse.cs, line: 10, symbol: "Warehouse.Stock"}
+    confidence: high
+    how: "journal.Save — Journal не реализует IStorage."
+  - rel: call
+    expect: must_not
+    from: {file: Traps/Warehouse.cs, line: 8, symbol: "Warehouse.Stock"}
+    confidence: high
+    how: "store.Save(\"crate\") — Fx.Traps.Store."
+---
+schema: 1
+id: cs-lang-10-persist-callees
+project: fixture-csharp-language
+languages: [csharp]
+kind: callees
+trap: true
+question: >
+  Какие методы может вызвать строка _storage.Save(data) в StorageClient.Persist?
+target:
+  file: Interfaces/StorageClient.cs
+  symbol: "StorageClient.Persist"
+  line: 14
+direction: outgoing
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    to: {file: Interfaces/IStorage.cs, line: 5, symbol: "IStorage.Save"}
+    confidence: high
+    how: "Статическая цель — метод интерфейса IStorage.Save."
+  - rel: call_interface
+    expect: must
+    to: {file: Interfaces/FileStore.cs, line: 15, symbol: "FileStore.Save"}
+    confidence: high
+    how: "Реализация IStorage.Save в FileStore (публичный неявный метод)."
+  - rel: call_interface
+    expect: must
+    to: {file: Interfaces/MemoryStore.cs, line: 7, symbol: "MemoryStore.Save"}
+    confidence: high
+    how: "Реализация IStorage.Save в MemoryStore."
+  - rel: call_interface
+    expect: must_not
+    to: {file: Interfaces/FileStore.cs, line: 26, symbol: "FileStore.IBackup.Save"}
+    confidence: high
+    how: "Явная реализация IBackup.Save достижима только через IBackup."
+  - rel: call_interface
+    expect: must_not
+    to: {file: Traps/Journal.cs, line: 10, symbol: "Journal.Save"}
+    confidence: high
+    how: "Journal не реализует IStorage."
+  - rel: call_interface
+    expect: must_not
+    to: {file: Traps/Store.cs, line: 8, symbol: "Store.Save"}
+    confidence: high
+    how: "Fx.Traps.Store не реализует IStorage."
+---
+schema: 1
+id: cs-lang-11-format-int-int-overload
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает перегрузку Formatter.Format(int, int)?
+target:
+  file: Overloads/Formatter.cs
+  symbol: "Formatter.Format(int,int)"
+  line: 15
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Overloads/Report.cs, line: 11, symbol: "Report.Build"}
+    confidence: high
+    how: "_formatter.Format(7, 3) — два аргумента, единственная перегрузка с арностью 2."
+  - rel: call
+    expect: must_not
+    from: {file: Overloads/Report.cs, line: 9, symbol: "Report.Build"}
+    confidence: high
+    how: "Format(42) — перегрузка Format(int)."
+  - rel: call
+    expect: must_not
+    from: {file: Overloads/Report.cs, line: 10, symbol: "Report.Build"}
+    confidence: high
+    how: "Format(\"total\") — перегрузка Format(string)."
+---
+schema: 1
+id: cs-lang-12-format-string-overload
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает перегрузку Formatter.Format(string)?
+target:
+  file: Overloads/Formatter.cs
+  symbol: "Formatter.Format(string)"
+  line: 10
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Overloads/Report.cs, line: 10, symbol: "Report.Build"}
+    confidence: high
+    how: "Аргумент — строковый литерал; из двух перегрузок с одним параметром подходит только Format(string)."
+  - rel: call
+    expect: must_not
+    from: {file: Overloads/Report.cs, line: 9, symbol: "Report.Build"}
+    confidence: high
+    how: "Format(42) — литерал int, перегрузка Format(int)."
+  - rel: call
+    expect: must_not
+    from: {file: Overloads/Report.cs, line: 11, symbol: "Report.Build"}
+    confidence: high
+    how: "Format(7, 3) — перегрузка Format(int, int)."
+notes: >
+  Выбор между Format(int) и Format(string) по типу литерала (ADR-006 §8.2: «по типам литералов»).
+---
+schema: 1
+id: cs-lang-13-repository-add-callers
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Repository<T>.Add?
+target:
+  file: Generics/Repository.cs
+  symbol: "Repository.Add"
+  line: 9
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Generics/GameState.cs, line: 12, symbol: "GameState.AddPlayer"}
+    confidence: high
+    how: "_players.Add(player); поле типа Repository<Player>."
+  - rel: call
+    expect: must
+    from: {file: Generics/GameState.cs, line: 17, symbol: "GameState.AddMonster"}
+    confidence: high
+    how: "_monsters.Add(monster); поле типа Repository<Monster>."
+  - rel: call
+    expect: must_not
+    from: {file: Generics/Repository.cs, line: 13, symbol: "Repository.Add"}
+    confidence: high
+    how: "_items.Add(item) — List<T>.Add (внешний метод), а не рекурсия."
+notes: >
+  Символы дженериков записаны без параметров типа: Repository.Add = Repository<T>.Add (в ключе ADR-006 —
+  Repository`1#Add(T)).
+---
+schema: 1
+id: cs-lang-14-repository-add-callees
+project: fixture-csharp-language
+languages: [csharp]
+kind: callees
+trap: true
+question: >
+  Что вызывает item.Validate() внутри Repository<T>.Add (T ограничен IEntity)?
+target:
+  file: Generics/Repository.cs
+  symbol: "Repository.Add"
+  line: 11
+direction: outgoing
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    to: {file: Generics/IEntity.cs, line: 7, symbol: "IEntity.Validate"}
+    confidence: high
+    how: "Тип получателя — параметр T с ограничением where T : IEntity → IEntity.Validate."
+  - rel: call_interface
+    expect: must
+    to: {file: Generics/Player.cs, line: 11, symbol: "Player.Validate"}
+    confidence: high
+    how: "Player : IEntity; Repository<Player> используется в GameState."
+  - rel: call_interface
+    expect: must
+    to: {file: Generics/Monster.cs, line: 11, symbol: "Monster.Validate"}
+    confidence: high
+    how: "Monster : IEntity; Repository<Monster> используется в GameState."
+  - rel: call_interface
+    expect: must_not
+    to: {file: Traps/Form.cs, line: 8, symbol: "Form.Validate"}
+    confidence: high
+    how: "Form.Validate() — Form не IEntity и не может быть T."
+---
+schema: 1
+id: cs-lang-15-health-damaged-event
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто подписан на событие Health.Damaged и кто его вызывает?
+target:
+  file: Events/Health.cs
+  symbol: "Health.Damaged"
+  line: 11
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: event_emit
+    expect: must
+    from: {file: Events/Health.cs, line: 21, symbol: "Health.TakeDamage"}
+    confidence: high
+    how: "Damaged?.Invoke(amount, source)."
+  - rel: event_subscribe
+    expect: must
+    from: {file: Events/HealthBar.cs, line: 18, symbol: "HealthBar.Bind"}
+    confidence: high
+    how: "_health.Damaged += OnDamaged; поле _health типа Health."
+  - rel: event_unsubscribe
+    expect: must
+    from: {file: Events/HealthBar.cs, line: 25, symbol: "HealthBar.Unbind"}
+    confidence: high
+    how: "_health.Damaged -= OnDamaged."
+  - rel: event_subscribe
+    expect: must
+    from: {file: Events/CombatLog.cs, line: 12, symbol: "CombatLog.Attach"}
+    confidence: high
+    how: "health.Damaged += лямбда; параметр health типа Health."
+  - rel: event_subscribe
+    expect: must_not
+    from: {file: Events/CombatLog.cs, line: 13, symbol: "CombatLog.Attach"}
+    confidence: high
+    how: "shield.Damaged — событие Shield.Damaged с тем же именем."
+  - rel: event_subscribe
+    expect: must_not
+    from: {file: Events/ShieldBar.cs, line: 10, symbol: "ShieldBar.Bind"}
+    confidence: high
+    how: "shield.Damaged += OnDamaged в ShieldBar — другое событие."
+  - rel: event_emit
+    expect: must_not
+    from: {file: Events/Shield.cs, line: 12, symbol: "Shield.Hit"}
+    confidence: high
+    how: "Damaged?.Invoke(amount) в Shield — вызов Shield.Damaged."
+---
+schema: 1
+id: cs-lang-16-healthbar-ondamaged-handler
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто и как вызывает обработчик HealthBar.OnDamaged (в коде нет прямых вызовов)?
+target:
+  file: Events/HealthBar.cs
+  symbol: "HealthBar.OnDamaged"
+  line: 28
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: callback_register
+    expect: must
+    from: {file: Events/HealthBar.cs, line: 18, symbol: "HealthBar.Bind"}
+    confidence: high
+    how: "Метод передан как обработчик: _health.Damaged += OnDamaged."
+  - rel: reference
+    expect: may
+    from: {file: Events/HealthBar.cs, line: 25, symbol: "HealthBar.Unbind"}
+    confidence: high
+    how: "Отписка _health.Damaged -= OnDamaged — упоминание метода без вызова."
+  - rel: event_emit
+    expect: may
+    from: {file: Events/Health.cs, line: 21, symbol: "Health.TakeDamage"}
+    confidence: high
+    how: "Косвенный вызывающий: Damaged?.Invoke вызывает всех подписчиков."
+  - rel: callback_register
+    expect: must_not
+    from: {file: Events/ShieldBar.cs, line: 10, symbol: "ShieldBar.Bind"}
+    confidence: high
+    how: "ShieldBar.OnDamaged — одноимённый обработчик другого класса."
+---
+schema: 1
+id: cs-lang-17-healthbar-hide-lambda
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: false
+question: >
+  Кто вызывает HealthBar.Hide?
+target:
+  file: Events/HealthBar.cs
+  symbol: "HealthBar.Hide"
+  line: 38
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Events/HealthBar.cs, line: 19, symbol: "HealthBar.Bind"}
+    confidence: high
+    how: "Вызов внутри лямбды () => Hide(), подписанной на Died; лямбда не узел — вызов относится к объемлющему методу Bind (ADR-006 §1)."
+  - rel: event_emit
+    expect: may
+    from: {file: Events/Health.cs, line: 24, symbol: "Health.TakeDamage"}
+    confidence: high
+    how: "Косвенно: Died?.Invoke() вызывает лямбду."
+---
+schema: 1
+id: cs-lang-18-combatlog-write-lambda
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает CombatLog.Write?
+target:
+  file: Events/CombatLog.cs
+  symbol: "CombatLog.Write"
+  line: 16
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Events/CombatLog.cs, line: 12, symbol: "CombatLog.Attach"}
+    confidence: high
+    how: "Write(...) в лямбде-обработчике health.Damaged; вызов относится к Attach."
+  - rel: call
+    expect: must
+    from: {file: Events/CombatLog.cs, line: 13, symbol: "CombatLog.Attach"}
+    confidence: high
+    how: "Write(...) в лямбде-обработчике shield.Damaged."
+  - rel: call
+    expect: must_not
+    from: {file: Statics/Startup.cs, line: 9, symbol: "Startup.Boot"}
+    confidence: high
+    how: "GameLog.Write — статический метод другого класса."
+  - rel: call
+    expect: must_not
+    from: {file: Statics/Startup.cs, line: 12, symbol: "Startup.Boot"}
+    confidence: high
+    how: "audit.Write — AuditLog.Write."
+  - rel: call
+    expect: must_not
+    from: {file: Aliases/AliasUser.cs, line: 15, symbol: "AliasUser.Run"}
+    confidence: high
+    how: "Log.Write через алиас Log = GameLog."
+---
+schema: 1
+id: cs-lang-19-healthbar-refresh-delegate-field
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: false
+question: >
+  Кто вызывает HealthBar.Refresh (он присвоен полю-делегату)?
+target:
+  file: Events/HealthBar.cs
+  symbol: "HealthBar.Refresh"
+  line: 33
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: callback_register
+    expect: must
+    from: {file: Events/HealthBar.cs, line: 20, symbol: "HealthBar.Bind"}
+    confidence: high
+    how: "_health.OnHealed = Refresh — метод присвоен полю-делегату Action<int> (не событию)."
+  - rel: callback_invoke
+    expect: may
+    from: {file: Events/Health.cs, line: 32, symbol: "Health.Heal"}
+    confidence: high
+    how: "OnHealed(amount) — вызов поля-делегата, в которое попадает Refresh."
+---
+schema: 1
+id: cs-lang-20-mathsteps-double-method-group
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает MathSteps.Double?
+target:
+  file: Lambdas/MathSteps.cs
+  symbol: "MathSteps.Double"
+  line: 5
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: callback_register
+    expect: must
+    from: {file: Lambdas/PipelineDemo.cs, line: 10, symbol: "PipelineDemo.Build"}
+    confidence: high
+    how: ".Then(MathSteps.Double) — группа методов передана как Func<int,int>."
+  - rel: callback_invoke
+    expect: may
+    from: {file: Lambdas/Pipeline.cs, line: 21, symbol: "Pipeline.Run"}
+    confidence: high
+    how: "step(value) вызывает сохранённые шаги, среди них MathSteps.Double."
+  - rel: call
+    expect: must_not
+    from: {file: Lambdas/PipelineDemo.cs, line: 19, symbol: "PipelineDemo.Bonus"}
+    confidence: high
+    how: "salary.Double() — Money.Double."
+---
+schema: 1
+id: cs-lang-21-mathsteps-increment-lambda
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: false
+question: >
+  Кто вызывает MathSteps.Increment?
+target:
+  file: Lambdas/MathSteps.cs
+  symbol: "MathSteps.Increment"
+  line: 10
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Lambdas/PipelineDemo.cs, line: 11, symbol: "PipelineDemo.Build"}
+    confidence: high
+    how: "x => MathSteps.Increment(x) — вызов в теле лямбды относится к PipelineDemo.Build."
+  - rel: callback_invoke
+    expect: may
+    from: {file: Lambdas/Pipeline.cs, line: 21, symbol: "Pipeline.Run"}
+    confidence: high
+    how: "Лямбда исполняется в Pipeline.Run."
+---
+schema: 1
+id: cs-lang-22-character-subclasses-partial
+project: fixture-csharp-language
+languages: [csharp]
+kind: implementations
+trap: true
+question: >
+  Какие классы наследуют Character?
+target:
+  file: Partial/Character.cs
+  symbol: "Character"
+  line: 3
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: inherit
+    expect: must
+    from: {file: Partial/Hero.Combat.cs, line: 4, symbol: "Hero"}
+    confidence: high
+    how: "partial class Hero : Character — база указана в части Hero.Combat.cs."
+  - rel: inherit
+    expect: may
+    from: {file: Partial/Hero.Movement.cs, line: 4, symbol: "Hero"}
+    confidence: high
+    how: "Вторая часть того же класса без списка баз; допустимо сослаться на любое объявление Hero."
+  - rel: inherit
+    expect: must
+    from: {file: Partial/Enemy.cs, line: 3, symbol: "Enemy"}
+    confidence: high
+    how: "class Enemy : Character."
+  - rel: inherit
+    expect: must_not
+    from: {file: Partial/CharacterSheet.cs, line: 4, symbol: "CharacterSheet"}
+    confidence: high
+    how: "CharacterSheet — совпадение префикса имени, не наследник."
+---
+schema: 1
+id: cs-lang-23-hero-attack-partial-callers
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Hero.Attack?
+target:
+  file: Partial/Hero.Combat.cs
+  symbol: "Hero.Attack"
+  line: 8
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Partial/Hero.Movement.cs, line: 12, symbol: "Hero.Dash"}
+    confidence: high
+    how: "Attack() без квалификатора в другой части partial-класса (Hero.Movement.cs)."
+  - rel: call
+    expect: must_not
+    from: {file: Partial/Arena.cs, line: 11, symbol: "Arena.Round"}
+    confidence: high
+    how: "enemy.Attack() — Enemy.Attack."
+---
+schema: 1
+id: cs-lang-24-character-heal-extension
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает метод расширения CharacterExtensions.Heal?
+target:
+  file: Extensions/CharacterExtensions.cs
+  symbol: "CharacterExtensions.Heal"
+  line: 8
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Partial/Arena.cs, line: 12, symbol: "Arena.Round"}
+    confidence: high
+    how: "hero.Heal(5): у Hero нет своего Heal, расширение для базового Character (using Fx.Extensions)."
+  - rel: call
+    expect: must
+    from: {file: Partial/Arena.cs, line: 13, symbol: "Arena.Round"}
+    confidence: high
+    how: "Статическая форма вызова CharacterExtensions.Heal(enemy, 1)."
+  - rel: call
+    expect: must_not
+    from: {file: Partial/Arena.cs, line: 14, symbol: "Arena.Round"}
+    confidence: high
+    how: "health.Heal(3) — метод экземпляра Fx.Events.Health.Heal."
+---
+schema: 1
+id: cs-lang-25-string-shout-extension
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает StringExtensions.Shout?
+target:
+  file: Extensions/StringExtensions.cs
+  symbol: "StringExtensions.Shout"
+  line: 5
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Extensions/Greeter.cs, line: 11, symbol: "Greeter.Greet"}
+    confidence: high
+    how: "name.Shout() — расширение для string (Greeter в том же пространстве имён Fx.Extensions)."
+  - rel: call
+    expect: must_not
+    from: {file: Extensions/Greeter.cs, line: 13, symbol: "Greeter.Greet"}
+    confidence: high
+    how: "_megaphone.Shout(name) — метод экземпляра Megaphone.Shout."
+---
+schema: 1
+id: cs-lang-26-memorystore-save-alias
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает MemoryStore.Save?
+target:
+  file: Interfaces/MemoryStore.cs
+  symbol: "MemoryStore.Save"
+  line: 7
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Aliases/AliasUser.cs, line: 14, symbol: "AliasUser.Run"}
+    confidence: high
+    how: "store.Save(\"alias\"): var store = new Store(), Store — алиас using Store = Fx.Interfaces.MemoryStore."
+  - rel: call_interface
+    expect: may
+    from: {file: Interfaces/StorageClient.cs, line: 14, symbol: "StorageClient.Persist"}
+    confidence: high
+    how: "Вызов через IStorage может попасть в MemoryStore."
+  - rel: call_interface
+    expect: may
+    from: {file: Interfaces/StorageUtil.cs, line: 10, symbol: "StorageUtil.SaveAll"}
+    confidence: high
+    how: "Вызов через ограничение T : IStorage."
+  - rel: call
+    expect: must_not
+    from: {file: Traps/Warehouse.cs, line: 8, symbol: "Warehouse.Stock"}
+    confidence: high
+    how: "store.Save(\"crate\") — Fx.Traps.Store.Save."
+---
+schema: 1
+id: cs-lang-27-traps-store-save-alias-trap
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает Fx.Traps.Store.Save?
+target:
+  file: Traps/Store.cs
+  symbol: "Store.Save"
+  line: 8
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Traps/Warehouse.cs, line: 8, symbol: "Warehouse.Stock"}
+    confidence: high
+    how: "var store = new Store() в пространстве имён Fx.Traps."
+  - rel: call
+    expect: must_not
+    from: {file: Aliases/AliasUser.cs, line: 14, symbol: "AliasUser.Run"}
+    confidence: high
+    how: "В AliasUser.cs есть и using Fx.Traps, и алиас Store = MemoryStore; алиас побеждает, это MemoryStore.Save."
+  - rel: reference
+    expect: must_not
+    from: {file: Aliases/AliasUser.cs, line: 13, symbol: "AliasUser.Run"}
+    confidence: high
+    how: "new Store() в AliasUser создаёт MemoryStore (алиас)."
+---
+schema: 1
+id: cs-lang-28-gamelog-write-static
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает статический GameLog.Write?
+target:
+  file: Statics/GameLog.cs
+  symbol: "GameLog.Write"
+  line: 9
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Statics/Startup.cs, line: 9, symbol: "Startup.Boot"}
+    confidence: high
+    how: "Статический вызов GameLog.Write(\"boot\")."
+  - rel: call
+    expect: must
+    from: {file: Aliases/AliasUser.cs, line: 15, symbol: "AliasUser.Run"}
+    confidence: high
+    how: "Log.Write(\"saved\"); Log — алиас using Log = Fx.Statics.GameLog."
+  - rel: call
+    expect: must_not
+    from: {file: Statics/Startup.cs, line: 12, symbol: "Startup.Boot"}
+    confidence: high
+    how: "audit.Write — метод экземпляра AuditLog.Write."
+  - rel: call
+    expect: must_not
+    from: {file: Events/CombatLog.cs, line: 12, symbol: "CombatLog.Attach"}
+    confidence: high
+    how: "Write(...) в лямбде CombatLog — CombatLog.Write."
+---
+schema: 1
+id: cs-lang-29-mathutil-clamp-using-static
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Кто вызывает MathUtil.Clamp?
+target:
+  file: Statics/MathUtil.cs
+  symbol: "MathUtil.Clamp"
+  line: 7
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: call
+    expect: must
+    from: {file: Aliases/AliasUser.cs, line: 16, symbol: "AliasUser.Run"}
+    confidence: high
+    how: "Clamp(150, 0, MaxValue) без квалификатора: using static Fx.Statics.MathUtil."
+  - rel: call
+    expect: must
+    from: {file: Properties/Settings.cs, line: 17, symbol: "Settings.Volume"}
+    confidence: high
+    how: "MathUtil.Clamp(...) в set-аксессоре свойства Volume."
+  - rel: call
+    expect: must_not
+    from: {file: Aliases/AliasUser.cs, line: 17, symbol: "AliasUser.Run"}
+    confidence: high
+    how: "Limits.Clamp — одноимённый статический метод Fx.Traps.Limits (соседняя строка)."
+---
+schema: 1
+id: cs-lang-30-settings-volume-property
+project: fixture-csharp-language
+languages: [csharp]
+kind: consumers
+trap: true
+question: >
+  Где читается и записывается свойство Settings.Volume?
+target:
+  file: Properties/Settings.cs
+  symbol: "Settings.Volume"
+  line: 12
+direction: incoming
+match: line
+line_tolerance: 0
+edges:
+  - rel: reference
+    expect: must
+    from: {file: Properties/SettingsMenu.cs, line: 12, symbol: "SettingsMenu.Render"}
+    confidence: high
+    how: "Запись: _settings.Volume = 80 (set)."
+  - rel: reference
+    expect: must
+    from: {file: Properties/SettingsMenu.cs, line: 13, symbol: "SettingsMenu.Render"}
+    confidence: high
+    how: "Чтение: int current = _settings.Volume (get)."
+  - rel: reference
+    expect: must
+    from: {file: Properties/SettingsMenu.cs, line: 14, symbol: "SettingsMenu.Render"}
+    confidence: high
+    how: "Составное присваивание += — get и set."
+  - rel: reference
+    expect: must
+    from: {file: Properties/Settings.cs, line: 24, symbol: "Settings.IsMuted"}
+    confidence: high
+    how: "Чтение Volume внутри свойства IsMuted того же класса."
+  - rel: reference
+    expect: may
+    from: {file: Properties/SettingsMenu.cs, line: 17, symbol: "SettingsMenu.Render"}
+    confidence: high
+    how: "nameof(Settings.Volume) — упоминание без доступа."
+  - rel: reference
+    expect: must_not
+    from: {file: Properties/SettingsMenu.cs, line: 16, symbol: "SettingsMenu.Render"}
+    confidence: high
+    how: "_mixer.Volume — свойство AudioMixer.Volume."

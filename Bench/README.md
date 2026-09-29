@@ -139,9 +139,37 @@ notes: >
 | `unity_event` | Unity: `m_PersistentCalls.m_Calls[]` с `m_MethodName` = метод target (в теле документа или через `m_Modifications`). |
 | `serialized_field` | Unity: в ассете лежат данные сериализованного поля target (ключ YAML или `propertyPath`). |
 | `asset_ref` | Ссылка на ассет по GUID (`{fileID, guid}`, `m_AssetGUID`). |
-| `engine_message` | Движок вызывает метод по имени (Unity `Awake`, `OnTriggerEnter`…); конец связи — `external`. |
+| `engine_message` | Движок вызывает метод по имени (Unity `Awake`, `OnTriggerEnter`…, Animation Event `functionName`); конец связи — `external`. |
+| `instantiate` | Создание экземпляра типа (`new T()`, `T{}`, `T::new()` как конструктор). |
 
 Новый тип связи добавляем сюда же, прежде чем использовать в эталоне.
+
+### Соответствие модели графа (ADR-006)
+
+Решение лида (2026-09-29): словарь `rel` — язык тестов, модель графа ADR-006 — внутренний язык ядра. Переводит адаптер `to_bench()` в тест-раннере ([[F02-02]]); эталоны под модель не переписываются.
+
+| `rel` в Bench | Как получается из графа ADR-006 |
+|---|---|
+| `call` | ребро `calls` на цель, у которой нет переопределений среди кандидатов |
+| `call_virtual`, `call_interface` | ребро `calls` на базовый метод или метод интерфейса + переход по входящим `overrides`/`implements` к реализациям |
+| `override` / `inherit` / `implement` / `import` | `overrides` / `inherits` / `implements` / `imports` |
+| `reference` | `uses_type`, `reads`, `writes` (любое из трёх) |
+| `instantiate` | `instantiates` |
+| `event_subscribe`, `event_unsubscribe` | `handles` (обработчик → событие) + место подписки из доказательства ребра; отписка — по токену `-=`/`off` в доказательстве |
+| `event_emit` | `raises` |
+| `callback_register` | `references` (метод как значение) |
+| `callback_invoke` | не строится в MVP — эталоны с этим видом считаются `may` |
+| `reflection`, `string_ref` | `calls` или `unity_ref` с источником `heuristic` |
+| `test` | любое ребро из узла с флагом `test` |
+| `script_on_object` | `runs_script` |
+| `script_via_prefab` | запрос `where_used` (цепочки `instance_of`/`variant_of` за вычетом удалённых компонентов) |
+| `prefab_instance` / `prefab_variant` | `instance_of` / `variant_of` |
+| `unity_event` | ребро UnityEvent → метод из слоя Unity |
+| `serialized_field` | `serializes` |
+| `asset_ref` | `unity_ref` (GUID и литералы `Resources.Load`, `LoadScene`, адреса Addressables) |
+| `engine_message` | флаг узла `entry=unity_message` (для Animation Event — `anim_event`) |
+
+Узлы: короткая запись `Class.Method` из эталона сопоставляется с ключом ADR-006 по имени типа и метода; перегрузки — списком типов `Format(int,int)`, явная реализация — `Type.IFace.M`.
 
 ### `expect`: как считать
 
@@ -211,4 +239,4 @@ notes: >
 
 ## Синтетические базы (F02-03)
 
-Синтетическая база — это маленький проект, граф которого известен заранее. Для неё: запись в `projects.yaml` с `source: synthetic` и `path: Bench/synthetic/<name>`, эталоны — в `Bench/cases/<name>/` в том же формате, `commit` можно опустить, `confidence` — всегда `high`. Удобно, чтобы каждый эталон синтетики проверял ровно один тип связи `rel` — тогда отчёт сразу показывает, какой тип инструмент не видит.
+Синтетическая база — маленький проект, граф которого известен заранее. Лежит в `Tests/fixtures/<язык>/<база>/` (не в `Bench/`), ожидаемый граф — `expected.yaml` рядом с базой: поток YAML-документов через `---`, каждый документ — эталон в формате выше; `project: fixture-<язык>-<база>`, `commit` не нужен, `confidence` — `high`, для соседних строк `match: line` с `line_tolerance: 0`. Список баз и что каждая проверяет — `Tests/fixtures/README.md`. При ручной правке базы номера строк в `expected.yaml` пересчитываются проверкой из раннера F02-02.
