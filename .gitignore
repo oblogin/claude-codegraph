@@ -10,3 +10,7 @@ plugin/bin/
 
 # Индекс codegraph, если плагин запускали на этом репозитории
 .codegraph/
+
+# Локальная память агентов проекта (memory: local)
+.claude/agent-memory-local/
+.claude/settings.local.json
