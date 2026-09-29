@@ -1,7 +1,7 @@
 ---
 id: F10-02
 type: task
-role: programmer
+role: developer
 status: ready
 priority: must
 size: L
